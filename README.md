@@ -1,6 +1,7 @@
 # UTEQ Smart Parking — Estacionamiento inteligente con React y Firebase RTDB
 <img width="1357" height="676" alt="image" src="https://github.com/user-attachments/assets/189914da-c1c1-40a4-8d0d-d44208aa81f5" />
                          <img width="615" height="546" alt="image" src="https://github.com/user-attachments/assets/197a3d94-4ebc-41f8-be4b-1292a7727389" />
+<img width="1361" height="631" alt="image" src="https://github.com/user-attachments/assets/d92383a1-ca6c-4be6-bd53-ea19e5171a73" />
 
 
 Aplicación web que simula el funcionamiento de un estacionamiento inteligente
