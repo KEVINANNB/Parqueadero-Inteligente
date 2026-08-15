@@ -5,16 +5,29 @@ import FiltrosEspacios from '../components/FiltrosEspacios'
 import CuadriculaEstacionamiento from '../components/CuadriculaEstacionamiento'
 import MapaEstacionamiento from '../components/MapaEstacionamiento'
 import { iniciarSimulacion } from '../services/simulacion'
+import { descargarJsonRTDB } from '../services/exportarDatos'
 
 export default function Estacionamiento() {
   const { espacios, cargando, error, estadisticas } = useEspacios()
   const [filtros, setFiltros] = useState({ estado: 'todos', columna: 'todas' })
+  const [descargando, setDescargando] = useState(false)
 
   // Inicia la simulación periódica mientras el usuario está en esta página
   useEffect(() => {
     const detener = iniciarSimulacion(15000)
     return () => detener()
   }, [])
+
+  const handleDescargarJson = async () => {
+    try {
+      setDescargando(true)
+      await descargarJsonRTDB()
+    } catch (err) {
+      console.error('Error al descargar el JSON de RTDB:', err)
+    } finally {
+      setDescargando(false)
+    }
+  }
 
   const espaciosFiltrados = useMemo(() => {
     return espacios.filter((e) => {
@@ -36,9 +49,18 @@ export default function Estacionamiento() {
             columna y estado.
           </p>
         </div>
-        <span className="badge-live">
-          <span className="dot-pulse" /> RTDB en vivo
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            className="btn btn-primary"
+            onClick={handleDescargarJson}
+            disabled={descargando}
+          >
+            {descargando ? 'Generando…' : 'Descargar JSON para RTDB'}
+          </button>
+          <span className="badge-live">
+            <span className="dot-pulse" /> RTDB en vivo
+          </span>
+        </div>
       </div>
 
       <ResumenEstacionamiento estadisticas={estadisticas} />
