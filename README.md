@@ -1,5 +1,5 @@
 # UTEQ Smart Parking — Estacionamiento inteligente con React y Firebase RTDB
-<img width="1357" height="676" alt="image" src="https://github.com/user-attachments/assets/189914da-c1c1-40a4-8d0d-d44208aa81f5" />
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/2bc8fd87-3ad2-4087-85fd-6b4b0c960498" />
 <img width="615" height="546" alt="image" src="https://github.com/user-attachments/assets/197a3d94-4ebc-41f8-be4b-1292a7727389" />
 <img width="1361" height="631" alt="image" src="https://github.com/user-attachments/assets/d92383a1-ca6c-4be6-bd53-ea19e5171a73" />
 
@@ -141,3 +141,72 @@ npm run preview   # para probar el build localmente
 ## Autor
 
 Zambrano Vega Cristian Gabriel — Ingeniería en Telemática, UTEQ.
+
+---
+
+# Ampliación: Panel de Administración del Smart Parking UTEQ (Grupo 5)
+
+Sobre la base del proyecto anterior se agregó un **panel de vehículos y
+propietarios** con React, **CoreUI** y **Supabase**, con inicio de sesión
+(correo/contraseña y Google) y dos roles de usuario.
+
+## Qué se agregó
+
+- `src/lib/supabase.js` — cliente de Supabase.
+- `src/context/AuthContext.jsx` — sesión, rol (`admin` / `usuario`), login, registro, login con Google, logout.
+- `src/hooks/useVehiculos.js` — listar, crear, actualizar y eliminar vehículos.
+- `src/components/VehiculoFormModal.jsx` — formulario (modal CoreUI) para agregar/editar, con validaciones.
+- `src/components/RutaProtegida.jsx` — exige sesión iniciada para entrar al panel.
+- `src/views/parqueadero/ListaVehiculos.jsx` — tabla CoreUI con búsqueda, paginación y botones de Agregar / Editar / Eliminar según el rol.
+- `src/pages/Login.jsx`, `src/pages/Registro.jsx` — autenticación.
+- `src/components/Logo.jsx` — logo del proyecto (siglas + nombre), usado en el encabezado.
+- `sql/002_crud_vehiculos_rls.sql` — políticas RLS para permitir el CRUD de forma segura.
+
+## Roles
+
+| Rol | Puede |
+|---|---|
+| **Administrador** | Agregar, editar y eliminar cualquier vehículo/propietario. |
+| **Usuario normal** (con sesión iniciada) | Ver el listado completo; editar únicamente **su propio vehículo** (marca, modelo, color, tipo y fotos), si su correo de sesión coincide con `correo_institucional` del registro. No puede agregar ni eliminar. |
+| Visitante sin sesión | Debe iniciar sesión para entrar a `/parqueadero/vehiculos`. |
+
+El rol se guarda en `raw_app_meta_data` del usuario en Supabase Auth (no en
+`user_metadata`, que el propio usuario podría modificar). Todas las cuentas
+nuevas son `usuario` normal por defecto.
+
+### Cómo convertir una cuenta en administrador
+
+1. Supabase → **Authentication → Users**.
+2. Selecciona el usuario → **Edit user** → campo **Raw App Meta Data**.
+3. Escribe: `{ "role": "admin" }` y guarda.
+
+## Configurar el proyecto
+
+1. Ejecuta en el **SQL Editor** de Supabase, en este orden:
+   - `supabase_parqueadero_uteq.sql` (si no lo habías ejecutado en la práctica anterior).
+   - `sql/002_crud_vehiculos_rls.sql` (nuevo, habilita insert/update/delete).
+2. Copia `.env.example` a `.env` y completa además:
+   ```
+   VITE_SUPABASE_URL=https://TU_PROYECTO.supabase.co
+   VITE_SUPABASE_ANON_KEY=sb_publishable_TU_CLAVE
+   ```
+3. (Opcional) Habilitar login con Google:
+   - Google Cloud Console → crear credenciales OAuth 2.0 (tipo "Aplicación web").
+   - Como *Authorized redirect URI* usa la que te muestra Supabase en
+     **Authentication → Providers → Google**.
+   - Copia el Client ID y Client Secret a Supabase en ese mismo panel y activa el proveedor.
+   - Si no configuras Google, el botón "Continuar con Google" mostrará un
+     error de Supabase; el login con correo/contraseña funciona sin este paso.
+4. `npm install && npm run dev`, abre `http://localhost:5173/parqueadero/vehiculos`.
+
+## Despliegue en Azure Static Web Apps
+
+Igual que en la práctica individual: crear el secreto de GitHub
+`VITE_SUPABASE_PUBLISHABLE_KEY` (además de `VITE_SUPABASE_URL`), y en el
+workflow YAML exponerlo bajo el nombre que usa el código:
+
+```yaml
+env:
+  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+  VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+```

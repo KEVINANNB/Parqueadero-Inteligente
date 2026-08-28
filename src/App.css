@@ -638,3 +638,124 @@ a {
   font-family: var(--mono);
   font-size: 0.9rem;
 }
+
+/* ---------- Auth / user nav additions ---------- */
+.app-nav-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.app-nav-email {
+  font-size: 0.85rem;
+  color: var(--text-1);
+}
+.badge-admin {
+  background: var(--acento);
+  color: #1a1300;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  margin-left: 0.35rem;
+}
+.auth-shell {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+.brand svg {
+  display: block;
+  color: var(--text-0);
+}
+
+/* ---------- Inicio: dashboard estilo SGA ---------- */
+.inicio-banner {
+  padding: 2.5rem 1.75rem 1.5rem;
+  text-align: left;
+}
+.inicio-banner h1 {
+  margin: 0.4rem 0 0.5rem;
+  font-size: 2rem;
+}
+.inicio-banner p {
+  color: var(--text-1);
+  max-width: 640px;
+  margin: 0;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.1rem;
+  padding: 0.5rem 1.75rem 2rem;
+}
+
+.dashboard-card {
+  background: #ffffff;
+  color: #1a2b25;
+  border-radius: 14px;
+  padding: 1.4rem 1.3rem;
+  text-align: left;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  font: inherit;
+  display: block;
+}
+.dashboard-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+.dashboard-card h3 {
+  margin: 0.15rem 0 0.35rem;
+  font-size: 1.05rem;
+  color: #14261f;
+}
+.dashboard-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #5b6b64;
+  line-height: 1.35;
+}
+.dashboard-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  margin-bottom: 0.6rem;
+  background: color-mix(in srgb, var(--card-color) 16%, white);
+  color: var(--card-color);
+}
+.dashboard-card-button {
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+}
+
+.stats-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 0.5rem 1.75rem 2rem;
+}
+.stats-item {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.75rem 1.1rem;
+  min-width: 140px;
+}
+.stats-value {
+  display: block;
+  font-family: var(--mono);
+  font-size: 1.2rem;
+  color: var(--verde);
+}
+.stats-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-2);
+  margin-top: 0.15rem;
+}

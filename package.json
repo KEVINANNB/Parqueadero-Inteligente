@@ -10,6 +10,11 @@
     "seed": "node scripts/seed.js"
   },
   "dependencies": {
+    "@coreui/coreui": "5.9.0",
+    "@coreui/icons": "3.1.0",
+    "@coreui/icons-react": "2.3.0",
+    "@coreui/react": "5.13.0",
+    "@supabase/supabase-js": "2.112.4",
     "firebase": "^10.13.0",
     "leaflet": "^1.9.4",
     "react": "^18.3.1",
