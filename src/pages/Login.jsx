@@ -42,55 +42,56 @@ export default function Login() {
   const [
     email,
     setEmail,
-  ] =
-    useState('')
+  ] = useState('')
 
 
   const [
     password,
     setPassword,
-  ] =
-    useState('')
+  ] = useState('')
 
 
   const [
     mostrarPassword,
     setMostrarPassword,
-  ] =
-    useState(false)
+  ] = useState(false)
 
 
   const [
     error,
     setError,
-  ] =
-    useState('')
+  ] = useState('')
 
 
   const [
     cargando,
     setCargando,
-  ] =
-    useState(false)
+  ] = useState(false)
 
 
   const [
     cargandoGoogle,
     setCargandoGoogle,
-  ] =
-    useState(false)
+  ] = useState(false)
 
 
   /* =========================================================
-     SI YA TIENE SESIÓN
+     USUARIO QUE YA TENÍA SESIÓN
      =========================================================
 
-     Si alguien autenticado intenta entrar nuevamente
-     a /login, regresamos al menú principal.
+     Esto solamente se ejecuta cuando el Login NO se encuentra
+     haciendo una transición.
+
+     Así no interfiere con la pantalla de carga después
+     de pulsar "Entrar".
      ========================================================= */
 
   useEffect(() => {
-    if (autenticado) {
+    if (
+      autenticado &&
+      !cargando &&
+      !cargandoGoogle
+    ) {
       navigate(
         '/',
         {
@@ -100,12 +101,14 @@ export default function Login() {
     }
   }, [
     autenticado,
+    cargando,
+    cargandoGoogle,
     navigate,
   ])
 
 
   /* =========================================================
-     LOGIN CORREO + CONTRASEÑA
+     CORREO + CONTRASEÑA
      ========================================================= */
 
   const manejarSubmit =
@@ -143,7 +146,8 @@ export default function Login() {
 
 
       /*
-       * Siempre entramos al MENÚ PRINCIPAL.
+       * Dejamos visible la pantalla
+       * de carga durante un momento.
        */
 
       setTimeout(() => {
@@ -153,7 +157,7 @@ export default function Login() {
             replace: true,
           },
         )
-      }, 600)
+      }, 900)
     }
 
 
@@ -165,9 +169,7 @@ export default function Login() {
     async () => {
       setError('')
 
-      setCargandoGoogle(
-        true,
-      )
+      setCargandoGoogle(true)
 
 
       const {
@@ -180,9 +182,7 @@ export default function Login() {
       if (
         errorGoogle
       ) {
-        setCargandoGoogle(
-          false,
-        )
+        setCargandoGoogle(false)
 
         setError(
           traducirError(
@@ -194,7 +194,7 @@ export default function Login() {
 
 
   /* =========================================================
-     PANTALLA DE TRANSICIÓN
+     PANTALLA DE CARGA
      ========================================================= */
 
   if (
@@ -206,18 +206,22 @@ export default function Login() {
         texto={
           cargandoGoogle
             ? 'Conectando con Google...'
-            : 'Verificando tus credenciales...'
+            : 'Preparando tu Smart Parking...'
         }
       />
     )
   }
 
 
+  /* =========================================================
+     LOGIN
+     ========================================================= */
+
   return (
     <div className="sga-login-page">
 
       {/* =====================================================
-          BARRA PROPIA DEL LOGIN
+          BARRA SUPERIOR
           ===================================================== */}
 
       <div className="sga-topbar">
@@ -242,7 +246,7 @@ export default function Login() {
 
 
       {/* =====================================================
-          FONDO
+          IMAGEN DE FONDO
           ===================================================== */}
 
       <div className="sga-login-bg">
@@ -250,7 +254,7 @@ export default function Login() {
         <div className="sga-login-overlay">
 
           {/* =================================================
-              TARJETA LOGIN
+              TARJETA
               ================================================= */}
 
           <div className="sga-login-card">
@@ -276,15 +280,15 @@ export default function Login() {
             </p>
 
 
-            {/* ERROR */}
-
             {error && (
+
               <CAlert
                 color="danger"
                 className="sga-login-error"
               >
                 {error}
               </CAlert>
+
             )}
 
 
@@ -294,9 +298,9 @@ export default function Login() {
               }
             >
 
-              {/* ===============================================
+              {/* =============================================
                   CORREO
-                  =============================================== */}
+                  ============================================= */}
 
               <div className="sga-field">
 
@@ -334,9 +338,9 @@ export default function Login() {
               </div>
 
 
-              {/* ===============================================
+              {/* =============================================
                   CONTRASEÑA
-                  =============================================== */}
+                  ============================================= */}
 
               <div className="sga-field">
 
@@ -385,7 +389,10 @@ export default function Login() {
 
                     onClick={() =>
                       setMostrarPassword(
-                        !mostrarPassword,
+                        (
+                          actual,
+                        ) =>
+                          !actual,
                       )
                     }
 
@@ -407,9 +414,9 @@ export default function Login() {
               </div>
 
 
-              {/* ===============================================
+              {/* =============================================
                   ENTRAR
-                  =============================================== */}
+                  ============================================= */}
 
               <CButton
                 type="submit"
@@ -423,26 +430,28 @@ export default function Login() {
               >
 
                 {cargando ? (
-                  <>
 
+                  <>
                     <CSpinner
                       size="sm"
                       className="me-2"
                     />
 
                     Ingresando...
-
                   </>
+
                 ) : (
+
                   'Entrar'
+
                 )}
 
               </CButton>
 
 
-              {/* ===============================================
+              {/* =============================================
                   GOOGLE
-                  =============================================== */}
+                  ============================================= */}
 
               <div className="sga-divider">
                 o continúa con
@@ -488,7 +497,7 @@ export default function Login() {
 
 
             {/* =================================================
-                REGISTRO
+                CREAR CUENTA
                 ================================================= */}
 
             <div className="sga-login-links">
@@ -523,7 +532,7 @@ export default function Login() {
 
 
 /* =========================================================
-   ERRORES SUPABASE
+   ERRORES
    ========================================================= */
 
 function traducirError(
@@ -576,7 +585,7 @@ function traducirError(
     )
   ) {
     return (
-      'El inicio de sesión con Google no está habilitado todavía.'
+      'El inicio de sesión con Google todavía no está habilitado.'
     )
   }
 

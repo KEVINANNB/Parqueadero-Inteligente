@@ -1,4 +1,5 @@
 import {
+  Navigate,
   Route,
   Routes,
   useLocation,
@@ -31,14 +32,8 @@ import MiPerfil
 import MisVehiculos
   from './views/cuenta/MisVehiculos'
 
-import RutaProtegida
-  from './components/RutaProtegida'
-
 import AppHeader
   from './components/AppHeader'
-
-import PantallaCarga
-  from './components/PantallaCarga'
 
 import {
   useAuth,
@@ -51,36 +46,54 @@ export default function App() {
 
 
   const {
-    cargando,
+    autenticado,
   } =
     useAuth()
 
 
-  /*
-   * Mientras Supabase recupera
-   * la sesión guardada.
-   */
+  /* =========================================================
+     PÁGINAS PÚBLICAS DE AUTENTICACIÓN
+     ========================================================= */
 
-  if (cargando) {
+  const esPaginaAuth =
+    ubicacion.pathname === '/login'
+    ||
+    ubicacion.pathname === '/registro'
+
+
+  /* =========================================================
+     BLOQUEO GENERAL
+     =========================================================
+
+     Esta es la parte fundamental.
+
+     Si NO existe sesión:
+
+     /
+     /estacionamiento
+     /parqueadero/mapa
+     /parqueadero/vehiculos
+     /cuenta/perfil
+     /cuenta/vehiculos
+     /espacios/...
+
+     TODOS son enviados a /login.
+
+     De esta manera el menú principal NUNCA puede aparecer
+     sin autenticación.
+     ========================================================= */
+
+  if (
+    !autenticado &&
+    !esPaginaAuth
+  ) {
     return (
-      <PantallaCarga
-        texto="Preparando tu sesión..."
+      <Navigate
+        to="/login"
+        replace
       />
     )
   }
-
-
-  /*
-   * Las páginas de autenticación
-   * ocupan toda la pantalla.
-   */
-
-  const esPaginaAuth =
-    ubicacion.pathname ===
-      '/login'
-    ||
-    ubicacion.pathname ===
-      '/registro'
 
 
   return (
@@ -91,6 +104,14 @@ export default function App() {
           : 'app-shell'
       }
     >
+
+      {/* =====================================================
+          HEADER
+
+          Login y registro no muestran la barra principal.
+
+          Después de autenticarse vuelve automáticamente.
+          ===================================================== */}
 
       {!esPaginaAuth && (
         <AppHeader />
@@ -108,7 +129,7 @@ export default function App() {
         <Routes>
 
           {/* =================================================
-              INICIO
+              MENÚ PRINCIPAL
               ================================================= */}
 
           <Route
@@ -142,11 +163,35 @@ export default function App() {
           <Route
             path="/parqueadero/mapa"
             element={
-              <RutaProtegida>
+              <MapaParqueadero />
+            }
+          />
 
-                <MapaParqueadero />
 
-              </RutaProtegida>
+          <Route
+            path="/parqueadero/vehiculos"
+            element={
+              <ListaVehiculos />
+            }
+          />
+
+
+          {/* =================================================
+              CUENTA
+              ================================================= */}
+
+          <Route
+            path="/cuenta/perfil"
+            element={
+              <MiPerfil />
+            }
+          />
+
+
+          <Route
+            path="/cuenta/vehiculos"
+            element={
+              <MisVehiculos />
             }
           />
 
@@ -172,45 +217,20 @@ export default function App() {
 
 
           {/* =================================================
-              VEHÍCULOS
+              RUTA DESCONOCIDA
               ================================================= */}
 
           <Route
-            path="/parqueadero/vehiculos"
+            path="*"
             element={
-              <RutaProtegida>
-
-                <ListaVehiculos />
-
-              </RutaProtegida>
-            }
-          />
-
-
-          {/* =================================================
-              CUENTA
-              ================================================= */}
-
-          <Route
-            path="/cuenta/perfil"
-            element={
-              <RutaProtegida>
-
-                <MiPerfil />
-
-              </RutaProtegida>
-            }
-          />
-
-
-          <Route
-            path="/cuenta/vehiculos"
-            element={
-              <RutaProtegida>
-
-                <MisVehiculos />
-
-              </RutaProtegida>
+              <Navigate
+                to={
+                  autenticado
+                    ? '/'
+                    : '/login'
+                }
+                replace
+              />
             }
           />
 
@@ -218,6 +238,12 @@ export default function App() {
 
       </main>
 
+
+      {/* =====================================================
+          FOOTER
+
+          Tampoco aparece en Login / Registro.
+          ===================================================== */}
 
       {!esPaginaAuth && (
 
