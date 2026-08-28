@@ -1,6 +1,7 @@
 import {
-  Routes,
   Route,
+  Routes,
+  useLocation,
 } from 'react-router-dom'
 
 import Inicio
@@ -36,21 +37,79 @@ import RutaProtegida
 import AppHeader
   from './components/AppHeader'
 
+import PantallaCarga
+  from './components/PantallaCarga'
+
+import {
+  useAuth,
+} from './context/AuthContext'
+
 
 export default function App() {
+  const ubicacion =
+    useLocation()
+
+
+  const {
+    cargando,
+  } =
+    useAuth()
+
+
+  /*
+   * Mientras Supabase recupera
+   * la sesión guardada.
+   */
+
+  if (cargando) {
+    return (
+      <PantallaCarga
+        texto="Preparando tu sesión..."
+      />
+    )
+  }
+
+
+  /*
+   * Las páginas de autenticación
+   * ocupan toda la pantalla.
+   */
+
+  const esPaginaAuth =
+    ubicacion.pathname ===
+      '/login'
+    ||
+    ubicacion.pathname ===
+      '/registro'
+
+
   return (
-    <div className="app-shell">
+    <div
+      className={
+        esPaginaAuth
+          ? 'app-shell app-shell-auth'
+          : 'app-shell'
+      }
+    >
 
-      <AppHeader />
+      {!esPaginaAuth && (
+        <AppHeader />
+      )}
 
 
-      <main className="app-main">
+      <main
+        className={
+          esPaginaAuth
+            ? 'app-main-auth'
+            : 'app-main'
+        }
+      >
 
         <Routes>
 
-          {/* ====================================================
+          {/* =================================================
               INICIO
-              ==================================================== */}
+              ================================================= */}
 
           <Route
             path="/"
@@ -60,9 +119,9 @@ export default function App() {
           />
 
 
-          {/* ====================================================
+          {/* =================================================
               PARQUEADERO
-              ==================================================== */}
+              ================================================= */}
 
           <Route
             path="/estacionamiento"
@@ -80,10 +139,6 @@ export default function App() {
           />
 
 
-          {/* ====================================================
-              MAPA GRANDE
-              ==================================================== */}
-
           <Route
             path="/parqueadero/mapa"
             element={
@@ -96,9 +151,9 @@ export default function App() {
           />
 
 
-          {/* ====================================================
+          {/* =================================================
               AUTENTICACIÓN
-              ==================================================== */}
+              ================================================= */}
 
           <Route
             path="/login"
@@ -116,9 +171,9 @@ export default function App() {
           />
 
 
-          {/* ====================================================
+          {/* =================================================
               VEHÍCULOS
-              ==================================================== */}
+              ================================================= */}
 
           <Route
             path="/parqueadero/vehiculos"
@@ -132,9 +187,9 @@ export default function App() {
           />
 
 
-          {/* ====================================================
+          {/* =================================================
               CUENTA
-              ==================================================== */}
+              ================================================= */}
 
           <Route
             path="/cuenta/perfil"
@@ -164,15 +219,19 @@ export default function App() {
       </main>
 
 
-      <footer className="app-footer">
+      {!esPaginaAuth && (
 
-        <p>
-          UTEQ · Aplicaciones
-          Telemáticas Basadas en Web
-          · Smart Parking UTEQ
-        </p>
+        <footer className="app-footer">
 
-      </footer>
+          <p>
+            UTEQ · Aplicaciones
+            Telemáticas Basadas en Web
+            · Smart Parking UTEQ
+          </p>
+
+        </footer>
+
+      )}
 
     </div>
   )

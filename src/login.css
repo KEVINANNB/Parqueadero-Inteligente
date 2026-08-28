@@ -1,0 +1,955 @@
+/* =========================================================
+   SMART PARKING UTEQ
+   LOGIN + SPLASH SCREEN
+   ========================================================= */
+
+
+/* =========================================================
+   PANTALLA COMPLETA DEL LOGIN
+   ========================================================= */
+
+.smart-login-page {
+  width: 100%;
+  min-height: 100vh;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(420px, 0.85fr);
+
+  background: #ffffff;
+
+  color: #111827;
+
+  overflow: hidden;
+}
+
+
+/* =========================================================
+   LADO VISUAL
+   ========================================================= */
+
+.smart-login-visual {
+  position: relative;
+
+  min-height: 100vh;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(0, 77, 34, 0.9),
+      rgba(0, 132, 61, 0.66)
+    ),
+    url('/images/mapa-parqueadero-base.png');
+
+  background-size: cover;
+  background-position: center;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: space-between;
+
+  padding: 48px 54px;
+
+  overflow: hidden;
+}
+
+
+.smart-login-visual::before {
+  content: '';
+
+  position: absolute;
+  inset: 0;
+
+  background:
+    radial-gradient(
+      circle at 25% 25%,
+      rgba(255,255,255,0.17),
+      transparent 35%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(0,0,0,0.04),
+      rgba(0,52,24,0.4)
+    );
+
+  pointer-events: none;
+}
+
+
+.smart-login-visual::after {
+  content: '';
+
+  position: absolute;
+
+  width: 460px;
+  height: 460px;
+
+  border-radius: 50%;
+
+  right: -180px;
+  bottom: -190px;
+
+  border: 70px solid rgba(255,255,255,0.06);
+
+  pointer-events: none;
+}
+
+
+.smart-login-brand,
+.smart-login-visual-content {
+  position: relative;
+  z-index: 2;
+}
+
+
+.smart-login-brand {
+  display: inline-flex;
+  align-items: center;
+
+  width: fit-content;
+
+  padding: 13px 18px;
+
+  border-radius: 18px;
+
+  background: rgba(255,255,255,0.93);
+
+  box-shadow:
+    0 12px 30px rgba(0,0,0,0.12);
+
+  color: #111827;
+}
+
+
+.smart-login-visual-content {
+  max-width: 610px;
+
+  color: #ffffff;
+
+  padding-bottom: 24px;
+}
+
+
+.smart-login-eyebrow {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin-bottom: 15px;
+
+  padding: 7px 12px;
+
+  border-radius: 999px;
+
+  background: rgba(255,255,255,0.15);
+
+  border: 1px solid rgba(255,255,255,0.25);
+
+  backdrop-filter: blur(8px);
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.11em;
+}
+
+
+.smart-login-visual-content h1 {
+  color: #ffffff !important;
+
+  margin: 0 0 15px;
+
+  font-size: clamp(
+    2.4rem,
+    4.5vw,
+    4.3rem
+  );
+
+  line-height: 1;
+
+  font-weight: 800;
+
+  letter-spacing: -0.04em;
+}
+
+
+.smart-login-visual-content p {
+  max-width: 530px;
+
+  margin: 0;
+
+  font-size: 1rem;
+
+  line-height: 1.7;
+
+  color: rgba(255,255,255,0.86) !important;
+}
+
+
+.smart-login-features {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 10px;
+
+  margin-top: 25px;
+}
+
+
+.smart-login-feature {
+  padding: 9px 13px;
+
+  border-radius: 12px;
+
+  background: rgba(0,0,0,0.18);
+
+  border: 1px solid rgba(255,255,255,0.18);
+
+  color: #ffffff;
+
+  font-size: 12px;
+
+  backdrop-filter: blur(7px);
+}
+
+
+/* =========================================================
+   LADO DEL FORMULARIO
+   ========================================================= */
+
+.smart-login-form-side {
+  min-height: 100vh;
+
+  display: grid;
+  place-items: center;
+
+  padding: 45px;
+
+  background:
+    radial-gradient(
+      circle at top right,
+      #effcf3,
+      transparent 32%
+    ),
+    #ffffff;
+}
+
+
+.smart-login-form-container {
+  width: min(
+    100%,
+    440px
+  );
+}
+
+
+.smart-login-mobile-logo {
+  display: none;
+
+  margin-bottom: 35px;
+
+  color: #111827;
+}
+
+
+.smart-login-welcome {
+  margin-bottom: 32px;
+}
+
+
+.smart-login-welcome small {
+  color: #087b26;
+
+  font-size: 12px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.13em;
+}
+
+
+.smart-login-welcome h2 {
+  margin: 8px 0 8px;
+
+  color: #111827 !important;
+
+  font-size: 2rem;
+
+  font-weight: 800;
+}
+
+
+.smart-login-welcome p {
+  margin: 0;
+
+  color: #6b7280 !important;
+
+  line-height: 1.55;
+}
+
+
+/* =========================================================
+   FORMULARIOS
+   ========================================================= */
+
+.smart-login-field {
+  margin-bottom: 20px;
+}
+
+
+.smart-login-field label {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #374151 !important;
+
+  font-size: 13px;
+
+  font-weight: 700;
+}
+
+
+.smart-login-input-wrap {
+  position: relative;
+}
+
+
+.smart-login-input {
+  width: 100%;
+
+  min-height: 50px;
+
+  padding:
+    0 15px;
+
+  border-radius: 12px !important;
+
+  border:
+    1px solid #d1d5db !important;
+
+  background:
+    #ffffff !important;
+
+  color:
+    #111827 !important;
+
+  font-size:
+    14px;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+
+.smart-login-input:focus {
+  border-color:
+    #087b26 !important;
+
+  box-shadow:
+    0 0 0 4px rgba(8,123,38,0.09) !important;
+}
+
+
+.smart-password-input {
+  padding-right:
+    52px !important;
+}
+
+
+.smart-password-toggle {
+  position: absolute;
+
+  right: 7px;
+  top: 50%;
+
+  transform:
+    translateY(-50%);
+
+  width:
+    40px;
+
+  height:
+    38px;
+
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  border:
+    0;
+
+  border-radius:
+    9px;
+
+  background:
+    transparent;
+
+  color:
+    #6b7280;
+
+  cursor:
+    pointer;
+}
+
+
+.smart-password-toggle:hover {
+  background:
+    #f3f4f6;
+
+  color:
+    #087b26;
+}
+
+
+/* =========================================================
+   BOTONES
+   ========================================================= */
+
+.smart-login-submit {
+  width: 100%;
+
+  min-height: 51px;
+
+  margin-top: 4px;
+
+  border: 0 !important;
+
+  border-radius:
+    12px !important;
+
+  background:
+    linear-gradient(
+      135deg,
+      #087b26,
+      #0a9932
+    ) !important;
+
+  color:
+    #ffffff !important;
+
+  font-weight:
+    800 !important;
+
+  box-shadow:
+    0 10px 20px rgba(8,123,38,0.18);
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+
+.smart-login-submit:hover:not(:disabled) {
+  transform:
+    translateY(-1px);
+
+  box-shadow:
+    0 13px 24px rgba(8,123,38,0.25);
+}
+
+
+.smart-login-submit:disabled {
+  opacity:
+    0.75;
+}
+
+
+.smart-login-divider {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    14px;
+
+  margin:
+    24px 0;
+
+  color:
+    #9ca3af;
+
+  font-size:
+    12px;
+}
+
+
+.smart-login-divider::before,
+.smart-login-divider::after {
+  content:
+    '';
+
+  height:
+    1px;
+
+  flex:
+    1;
+
+  background:
+    #e5e7eb;
+}
+
+
+.smart-google-button {
+  width:
+    100%;
+
+  min-height:
+    50px;
+
+  border-radius:
+    12px !important;
+
+  border:
+    1px solid #d1d5db !important;
+
+  background:
+    #ffffff !important;
+
+  color:
+    #374151 !important;
+
+  font-weight:
+    700 !important;
+
+  display:
+    flex !important;
+
+  justify-content:
+    center;
+
+  align-items:
+    center;
+
+  gap:
+    11px;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+
+.smart-google-button:hover {
+  background:
+    #f8fafc !important;
+
+  border-color:
+    #9ca3af !important;
+}
+
+
+.smart-google-icon {
+  width:
+    21px;
+
+  height:
+    21px;
+}
+
+
+/* =========================================================
+   MENSAJES
+   ========================================================= */
+
+.smart-login-error {
+  border:
+    0 !important;
+
+  border-left:
+    4px solid #dc2626 !important;
+
+  background:
+    #fef2f2 !important;
+
+  color:
+    #991b1b !important;
+
+  border-radius:
+    10px !important;
+}
+
+
+.smart-login-register {
+  margin:
+    27px 0 0;
+
+  text-align:
+    center;
+
+  color:
+    #6b7280 !important;
+
+  font-size:
+    13px;
+}
+
+
+.smart-login-register a {
+  color:
+    #087b26 !important;
+
+  font-weight:
+    800;
+
+  text-decoration:
+    none;
+}
+
+
+.smart-login-register a:hover {
+  text-decoration:
+    underline;
+}
+
+
+.smart-login-footer {
+  margin-top:
+    35px;
+
+  text-align:
+    center;
+
+  color:
+    #9ca3af !important;
+
+  font-size:
+    11px;
+}
+
+
+/* =========================================================
+   SPLASH / LOADING
+   ========================================================= */
+
+.smart-loading-screen {
+  position:
+    fixed;
+
+  inset:
+    0;
+
+  z-index:
+    99999;
+
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  background:
+    radial-gradient(
+      circle at center,
+      #ffffff,
+      #edf8f0 70%
+    );
+
+  color:
+    #111827;
+}
+
+
+.smart-loading-content {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  align-items:
+    center;
+
+  text-align:
+    center;
+
+  padding:
+    30px;
+}
+
+
+.smart-loading-logo {
+  margin-bottom:
+    36px;
+
+  color:
+    #111827;
+}
+
+
+.smart-loading-parking {
+  width:
+    90px;
+
+  height:
+    90px;
+
+  position:
+    relative;
+
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  margin-bottom:
+    22px;
+}
+
+
+.smart-loading-p {
+  width:
+    64px;
+
+  height:
+    64px;
+
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  border-radius:
+    18px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #087b26,
+      #12a642
+    );
+
+  color:
+    #ffffff;
+
+  font-size:
+    38px;
+
+  font-weight:
+    900;
+
+  box-shadow:
+    0 12px 30px rgba(8,123,38,0.25);
+
+  z-index:
+    2;
+}
+
+
+.smart-loading-ring {
+  position:
+    absolute;
+
+  inset:
+    4px;
+
+  border:
+    2px solid rgba(8,123,38,0.2);
+
+  border-radius:
+    24px;
+
+  animation:
+    smartPulse 1.8s infinite ease-out;
+}
+
+
+.smart-loading-ring-2 {
+  animation-delay:
+    0.7s;
+}
+
+
+@keyframes smartPulse {
+  0% {
+    transform:
+      scale(0.72);
+
+    opacity:
+      1;
+  }
+
+  100% {
+    transform:
+      scale(1.35);
+
+    opacity:
+      0;
+  }
+}
+
+
+.smart-loading-spinner {
+  display:
+    flex;
+
+  gap:
+    7px;
+
+  height:
+    20px;
+
+  margin-bottom:
+    17px;
+}
+
+
+.smart-loading-spinner span {
+  width:
+    8px;
+
+  height:
+    8px;
+
+  border-radius:
+    50%;
+
+  background:
+    #087b26;
+
+  animation:
+    smartBounce 1s infinite ease-in-out;
+}
+
+
+.smart-loading-spinner span:nth-child(2) {
+  animation-delay:
+    0.15s;
+}
+
+
+.smart-loading-spinner span:nth-child(3) {
+  animation-delay:
+    0.3s;
+}
+
+
+@keyframes smartBounce {
+  0%,
+  100% {
+    transform:
+      translateY(0);
+
+    opacity:
+      0.4;
+  }
+
+  50% {
+    transform:
+      translateY(-8px);
+
+    opacity:
+      1;
+  }
+}
+
+
+.smart-loading-content h3 {
+  margin:
+    0 0 6px;
+
+  color:
+    #111827 !important;
+
+  font-weight:
+    800;
+}
+
+
+.smart-loading-content p {
+  margin:
+    0;
+
+  color:
+    #6b7280 !important;
+
+  font-size:
+    13px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (
+  max-width: 900px
+) {
+  .smart-login-page {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .smart-login-visual {
+    display:
+      none;
+  }
+
+
+  .smart-login-form-side {
+    padding:
+      28px 22px;
+
+    min-height:
+      100vh;
+  }
+
+
+  .smart-login-mobile-logo {
+    display:
+      block;
+
+    text-align:
+      center;
+  }
+}
+
+
+@media (
+  max-width: 480px
+) {
+  .smart-login-form-side {
+    padding:
+      25px 18px;
+  }
+
+
+  .smart-login-welcome h2 {
+    font-size:
+      1.7rem;
+  }
+}
+/* =========================================================
+   APP EN PÁGINAS DE AUTENTICACIÓN
+   ========================================================= */
+
+.app-shell-auth {
+  min-height: 100vh !important;
+  background: #ffffff !important;
+}
+
+.app-main-auth {
+  width: 100% !important;
+  max-width: none !important;
+
+  min-height: 100vh !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: #ffffff !important;
+}
