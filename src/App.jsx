@@ -26,6 +26,18 @@ import ListaVehiculos
 import MapaParqueadero
   from './views/parqueadero/MapaParqueadero'
 
+import GestionParqueaderoLayout
+  from './views/parqueadero/GestionParqueaderoLayout'
+
+import PuestosGestion
+  from './views/parqueadero/PuestosGestion'
+
+import Propietarios
+  from './views/parqueadero/Propietarios'
+
+import HistorialParqueadero
+  from './views/parqueadero/HistorialParqueadero'
+
 import MiPerfil
   from './views/cuenta/MiPerfil'
 
@@ -44,7 +56,6 @@ export default function App() {
   const ubicacion =
     useLocation()
 
-
   const {
     autenticado,
   } =
@@ -52,7 +63,7 @@ export default function App() {
 
 
   /* =========================================================
-     PÁGINAS PÚBLICAS DE AUTENTICACIÓN
+     LOGIN / REGISTRO
      ========================================================= */
 
   const esPaginaAuth =
@@ -62,25 +73,7 @@ export default function App() {
 
 
   /* =========================================================
-     BLOQUEO GENERAL
-     =========================================================
-
-     Esta es la parte fundamental.
-
-     Si NO existe sesión:
-
-     /
-     /estacionamiento
-     /parqueadero/mapa
-     /parqueadero/vehiculos
-     /cuenta/perfil
-     /cuenta/vehiculos
-     /espacios/...
-
-     TODOS son enviados a /login.
-
-     De esta manera el menú principal NUNCA puede aparecer
-     sin autenticación.
+     LOGIN OBLIGATORIO
      ========================================================= */
 
   if (
@@ -107,10 +100,6 @@ export default function App() {
 
       {/* =====================================================
           HEADER
-
-          Login y registro no muestran la barra principal.
-
-          Después de autenticarse vuelve automáticamente.
           ===================================================== */}
 
       {!esPaginaAuth && (
@@ -141,7 +130,7 @@ export default function App() {
 
 
           {/* =================================================
-              PARQUEADERO
+              PARQUEADERO GENERAL
               ================================================= */}
 
           <Route
@@ -160,6 +149,10 @@ export default function App() {
           />
 
 
+          {/* =================================================
+              MAPA DEL PARQUEADERO
+              ================================================= */}
+
           <Route
             path="/parqueadero/mapa"
             element={
@@ -168,12 +161,74 @@ export default function App() {
           />
 
 
+          {/* =================================================
+              MÓDULO DE GESTIÓN
+              
+              AQUÍ ESTÁ LA CORRECCIÓN IMPORTANTE.
+              GestionParqueaderoLayout contiene el menú lateral.
+              Outlet muestra cada sección a la derecha.
+              ================================================= */}
+
           <Route
-            path="/parqueadero/vehiculos"
+            path="/parqueadero"
             element={
-              <ListaVehiculos />
+              <GestionParqueaderoLayout />
             }
-          />
+          >
+
+            {/* Si entran solamente a /parqueadero */}
+
+            <Route
+              index
+              element={
+                <Navigate
+                  to="vehiculos"
+                  replace
+                />
+              }
+            />
+
+
+            {/* VEHÍCULOS */}
+
+            <Route
+              path="vehiculos"
+              element={
+                <ListaVehiculos />
+              }
+            />
+
+
+            {/* PUESTOS */}
+
+            <Route
+              path="puestos"
+              element={
+                <PuestosGestion />
+              }
+            />
+
+
+            {/* PROPIETARIOS */}
+
+            <Route
+              path="propietarios"
+              element={
+                <Propietarios />
+              }
+            />
+
+
+            {/* HISTORIAL */}
+
+            <Route
+              path="historial"
+              element={
+                <HistorialParqueadero />
+              }
+            />
+
+          </Route>
 
 
           {/* =================================================
@@ -217,7 +272,7 @@ export default function App() {
 
 
           {/* =================================================
-              RUTA DESCONOCIDA
+              CUALQUIER RUTA DESCONOCIDA
               ================================================= */}
 
           <Route
@@ -241,8 +296,6 @@ export default function App() {
 
       {/* =====================================================
           FOOTER
-
-          Tampoco aparece en Login / Registro.
           ===================================================== */}
 
       {!esPaginaAuth && (
