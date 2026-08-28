@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { CAlert, CButton, CCard, CCardBody, CForm, CFormInput, CFormLabel, CSpinner } from '@coreui/react'
 import { useAuth } from '../context/AuthContext'
+import Logo from '../components/Logo'
 
 export default function Login() {
   const { iniciarSesion, iniciarSesionConGoogle } = useAuth()
@@ -31,6 +32,12 @@ export default function Login() {
     <div className="auth-shell">
       <CCard style={{ maxWidth: 420, width: '100%' }}>
         <CCardBody>
+          <div className="text-center mb-4">
+            <Logo
+              width={230}
+              height={60}
+            />
+          </div>
           <h4 className="mb-3">Iniciar sesión</h4>
 
           {error && <CAlert color="danger">{error}</CAlert>}

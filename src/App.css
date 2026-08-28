@@ -759,3 +759,55 @@ a {
   color: var(--text-2);
   margin-top: 0.15rem;
 }
+/* =========================================================
+   HEADER TIPO SGA
+   ========================================================= */
+
+.app-header-sga {
+  background: #087b26;
+  min-height: 64px;
+  z-index: 1030;
+}
+
+.header-link {
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: 0.2s ease;
+}
+
+.header-link:hover,
+.header-link.active {
+  color: #fff;
+}
+
+
+/* =========================================================
+   DASHBOARD TIPO SGA
+   ========================================================= */
+
+.dashboard-sga {
+  padding-top: 2rem;
+}
+
+.menu-sga-card {
+  cursor: pointer;
+  border: 1px solid var(--cui-border-color);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.menu-sga-card:hover {
+  transform: translateY(-3px);
+}
+
+.menu-sga-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(25, 135, 84, 0.1);
+  color: var(--cui-success);
+}
