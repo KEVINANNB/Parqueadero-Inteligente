@@ -1,0 +1,382 @@
+/* =========================================================
+   UTEQ SMART PARKING - TEMA CLARO
+   ========================================================= */
+
+:root {
+  color-scheme: light;
+
+  --bg-0: #ffffff;
+  --bg-1: #f8fafc;
+  --bg-2: #ffffff;
+
+  --line: #e5e7eb;
+
+  --text-0: #111827;
+  --text-1: #374151;
+  --text-2: #6b7280;
+
+  --verde: #198754;
+  --verde-dim: #e8f5ed;
+
+  --rojo: #dc3545;
+  --rojo-dim: #fdecef;
+
+  --gris: #6b7280;
+  --acento: #f59e0b;
+}
+
+
+/* =========================================================
+   FONDO GENERAL
+   ========================================================= */
+
+html,
+body,
+#root,
+.app-shell {
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+body {
+  background: #ffffff !important;
+}
+
+.app-main {
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+.app-footer {
+  background: #ffffff !important;
+  color: #6b7280 !important;
+  border-top: 1px solid #e5e7eb !important;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.app-header-sga {
+  background: #087b26 !important;
+  min-height: 64px;
+  z-index: 1030;
+  border-bottom: none !important;
+}
+
+.header-link {
+  color: rgba(255, 255, 255, 0.88) !important;
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.header-link:hover,
+.header-link.active {
+  color: #ffffff !important;
+}
+
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+
+.dashboard-sga {
+  background: #ffffff !important;
+  color: #111827 !important;
+  padding-top: 2rem;
+}
+
+.menu-sga-card {
+  cursor: pointer;
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #e5e7eb !important;
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.menu-sga-card:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.08) !important;
+}
+
+.menu-sga-card .card-body {
+  background: #ffffff !important;
+}
+
+.menu-sga-card h1,
+.menu-sga-card h2,
+.menu-sga-card h3,
+.menu-sga-card h4,
+.menu-sga-card h5,
+.menu-sga-card h6 {
+  color: #111827 !important;
+}
+
+.menu-sga-card p {
+  color: #6b7280 !important;
+}
+
+.menu-sga-icon {
+  width: 52px;
+  height: 52px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  background: rgba(8, 123, 38, 0.09) !important;
+  color: #087b26 !important;
+}
+
+
+/* =========================================================
+   PANELES
+   ========================================================= */
+
+.inicio-banner,
+.panel,
+.feature-card,
+.stats-strip,
+.stats-item,
+.detalle-lista,
+.sensor-detalle {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+
+.inicio-banner h1,
+.inicio-banner h2,
+.inicio-banner h3,
+.panel h1,
+.panel h2,
+.panel h3,
+.feature-card h3 {
+  color: #111827 !important;
+}
+
+.inicio-banner p,
+.panel p,
+.feature-card p,
+.stats-label {
+  color: #6b7280 !important;
+}
+
+
+/* =========================================================
+   COREUI
+   ========================================================= */
+
+.card {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+
+.card-body {
+  color: #111827 !important;
+}
+
+.card-header {
+  background: #f8fafc !important;
+  color: #111827 !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+
+/* =========================================================
+   TEXTOS
+   ========================================================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #111827;
+}
+
+.text-body {
+  color: #111827 !important;
+}
+
+.text-body-secondary,
+.form-text {
+  color: #6b7280 !important;
+}
+
+
+/* =========================================================
+   TABLAS
+   ========================================================= */
+
+.table {
+  --cui-table-color: #111827;
+  --cui-table-bg: #ffffff;
+  --cui-table-striped-color: #111827;
+  --cui-table-striped-bg: #f8fafc;
+  --cui-table-hover-color: #111827;
+  --cui-table-hover-bg: #f1f5f9;
+
+  color: #111827 !important;
+  background: #ffffff !important;
+}
+
+.table > :not(caption) > * > * {
+  color: #111827;
+  border-color: #e5e7eb;
+}
+
+.table thead th {
+  background: #f1f5f9 !important;
+  color: #111827 !important;
+}
+
+
+/* =========================================================
+   FORMULARIOS
+   ========================================================= */
+
+.form-label {
+  color: #111827 !important;
+  font-weight: 500;
+}
+
+.form-control,
+.form-select {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.form-control::placeholder {
+  color: #9ca3af !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background: #ffffff !important;
+  color: #111827 !important;
+
+  border-color: #198754 !important;
+
+  box-shadow:
+    0 0 0 0.15rem rgba(25, 135, 84, 0.15) !important;
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+  background: #f3f4f6 !important;
+  color: #6b7280 !important;
+}
+
+
+/* =========================================================
+   MODALES
+   ========================================================= */
+
+.modal-content {
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+.modal-header,
+.modal-body,
+.modal-footer {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+
+
+/* =========================================================
+   DROPDOWN
+   ========================================================= */
+
+.dropdown-menu {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #e5e7eb !important;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
+
+.dropdown-header {
+  background: #f8fafc !important;
+  color: #111827 !important;
+}
+
+.dropdown-item {
+  color: #111827 !important;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.dropdown-item.text-danger {
+  color: #dc3545 !important;
+}
+
+.dropdown-divider {
+  border-color: #e5e7eb !important;
+}
+
+
+/* =========================================================
+   ENLACES
+   ========================================================= */
+
+.card a:not(.btn),
+.table a {
+  color: #087b26;
+}
+
+.card a:not(.btn):hover,
+.table a:hover {
+  color: #055d1c;
+}
+
+
+/* =========================================================
+   ESTADOS
+   ========================================================= */
+
+.estado-cargando,
+.estado-vacio {
+  color: #374151 !important;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
