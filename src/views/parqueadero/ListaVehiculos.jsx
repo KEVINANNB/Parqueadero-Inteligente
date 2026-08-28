@@ -37,6 +37,159 @@ import {
 import VehiculoFormModal
   from '../../components/VehiculoFormModal'
 
+
+/* ================================================================
+   FOTO DEL PROPIETARIO
+   ================================================================
+
+   - Muestra la fotografía circular.
+   - Si no existe URL, muestra iniciales.
+   - Si la URL está rota, también muestra iniciales.
+   ================================================================ */
+
+function FotoPropietario({
+  nombre,
+  foto,
+  size = 52,
+}) {
+  const [
+    errorImagen,
+    setErrorImagen,
+  ] = useState(false)
+
+  useEffect(() => {
+    setErrorImagen(false)
+  }, [foto])
+
+  const iniciales = String(
+    nombre || 'Usuario',
+  )
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((palabra) =>
+      palabra.charAt(0).toUpperCase(),
+    )
+    .join('')
+
+  if (!foto || errorImagen) {
+    return (
+      <div
+        title={nombre}
+        style={{
+          width: size,
+          height: size,
+          minWidth: size,
+          borderRadius: '50%',
+          display: 'grid',
+          placeItems: 'center',
+          background: '#e8f5ed',
+          color: '#087b26',
+          border: '2px solid #d1e7dd',
+          fontWeight: 700,
+          fontSize: size * 0.3,
+          userSelect: 'none',
+        }}
+      >
+        {iniciales || 'U'}
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={foto}
+      alt={`Fotografía de ${nombre}`}
+      title={nombre}
+      width={size}
+      height={size}
+      loading="lazy"
+      onError={() =>
+        setErrorImagen(true)
+      }
+      style={{
+        width: size,
+        height: size,
+        minWidth: size,
+        objectFit: 'cover',
+        objectPosition: 'center',
+        borderRadius: '50%',
+        border: '2px solid #d1e7dd',
+        background: '#f3f4f6',
+      }}
+    />
+  )
+}
+
+
+/* ================================================================
+   FOTO DEL VEHÍCULO
+   ================================================================ */
+
+function FotoVehiculo({
+  vehiculo,
+}) {
+  const [
+    errorImagen,
+    setErrorImagen,
+  ] = useState(false)
+
+  useEffect(() => {
+    setErrorImagen(false)
+  }, [vehiculo.foto_url])
+
+  if (
+    !vehiculo.foto_url ||
+    errorImagen
+  ) {
+    return (
+      <div
+        style={{
+          width: 90,
+          height: 60,
+          display: 'grid',
+          placeItems: 'center',
+          borderRadius: 8,
+          background: '#f3f4f6',
+          border: '1px solid #e5e7eb',
+          color: '#6b7280',
+          fontSize: 12,
+          textAlign: 'center',
+        }}
+      >
+        Sin foto
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={vehiculo.foto_url}
+      alt={`${vehiculo.marca} ${vehiculo.modelo}`}
+      width="90"
+      height="60"
+      loading="lazy"
+      onError={() =>
+        setErrorImagen(true)
+      }
+      style={{
+        width: 90,
+        height: 60,
+        objectFit: 'cover',
+        borderRadius: 8,
+        border:
+          '1px solid #e5e7eb',
+      }}
+    />
+  )
+}
+
+
+/* ================================================================
+   VISTA PRINCIPAL
+   ================================================================ */
+
 const ListaVehiculos = () => {
   const {
     vehiculos,
@@ -54,11 +207,15 @@ const ListaVehiculos = () => {
     puedeAdministrar,
   } = useAuth()
 
-  const [busqueda, setBusqueda] =
-    useState('')
+  const [
+    busqueda,
+    setBusqueda,
+  ] = useState('')
 
-  const [pagina, setPagina] =
-    useState(1)
+  const [
+    pagina,
+    setPagina,
+  ] = useState(1)
 
   const vehiculosPorPagina = 10
 
@@ -92,9 +249,19 @@ const ListaVehiculos = () => {
     setMensaje,
   ] = useState(null)
 
+
+  /* =============================================================
+     REINICIAR PÁGINA AL BUSCAR
+     ============================================================= */
+
   useEffect(() => {
     setPagina(1)
   }, [busqueda])
+
+
+  /* =============================================================
+     OCULTAR MENSAJES AUTOMÁTICAMENTE
+     ============================================================= */
 
   useEffect(() => {
     if (!mensaje) {
@@ -107,17 +274,16 @@ const ListaVehiculos = () => {
       }, 4000)
 
     return () =>
-      clearTimeout(temporizador)
+      clearTimeout(
+        temporizador,
+      )
   }, [mensaje])
 
-  /*
-   * Un administrador en Vista usuario
-   * debe visualmente comportarse como
-   * usuario normal.
-   *
-   * Por eso ocultamos los no autorizados
-   * mientras no esté en vista admin.
-   */
+
+  /* =============================================================
+     VEHÍCULOS VISIBLES SEGÚN ROL
+     ============================================================= */
+
   const vehiculosVisibles =
     useMemo(() => {
       if (puedeAdministrar) {
@@ -132,6 +298,11 @@ const ListaVehiculos = () => {
       vehiculos,
       puedeAdministrar,
     ])
+
+
+  /* =============================================================
+     BUSCADOR
+     ============================================================= */
 
   const vehiculosFiltrados =
     useMemo(() => {
@@ -151,8 +322,10 @@ const ListaVehiculos = () => {
             vehiculo.marca,
             vehiculo.modelo,
             vehiculo.color,
+            vehiculo.tipo,
             vehiculo.propietario_nombre,
             vehiculo.correo_institucional,
+            vehiculo.cedula_enmascarada,
           ].some((valor) =>
             String(valor ?? '')
               .toLowerCase()
@@ -164,18 +337,25 @@ const ListaVehiculos = () => {
       busqueda,
     ])
 
-  const totalPaginas = Math.max(
-    1,
-    Math.ceil(
-      vehiculosFiltrados.length /
-        vehiculosPorPagina,
-    ),
-  )
 
-  const paginaActual = Math.min(
-    pagina,
-    totalPaginas,
-  )
+  /* =============================================================
+     PAGINACIÓN
+     ============================================================= */
+
+  const totalPaginas =
+    Math.max(
+      1,
+      Math.ceil(
+        vehiculosFiltrados.length /
+          vehiculosPorPagina,
+      ),
+    )
+
+  const paginaActual =
+    Math.min(
+      pagina,
+      totalPaginas,
+    )
 
   const vehiculosPaginados =
     useMemo(() => {
@@ -193,6 +373,11 @@ const ListaVehiculos = () => {
       paginaActual,
     ])
 
+
+  /* =============================================================
+     AGREGAR
+     ============================================================= */
+
   const abrirAgregar = () => {
     if (!puedeAdministrar) {
       return
@@ -200,10 +385,17 @@ const ListaVehiculos = () => {
 
     setModoModal('crear')
 
-    setVehiculoSeleccionado(null)
+    setVehiculoSeleccionado(
+      null,
+    )
 
     setModalAbierto(true)
   }
+
+
+  /* =============================================================
+     EDITAR
+     ============================================================= */
 
   const abrirEditar = (
     vehiculo,
@@ -212,7 +404,9 @@ const ListaVehiculos = () => {
       return
     }
 
-    setModoModal('editar-admin')
+    setModoModal(
+      'editar-admin',
+    )
 
     setVehiculoSeleccionado(
       vehiculo,
@@ -220,6 +414,11 @@ const ListaVehiculos = () => {
 
     setModalAbierto(true)
   }
+
+
+  /* =============================================================
+     GUARDAR
+     ============================================================= */
 
   const manejarGuardar =
     async (payload) => {
@@ -244,15 +443,19 @@ const ListaVehiculos = () => {
       setMensaje(
         resultado.ok
           ? {
-              tipo: 'success',
+              tipo:
+                'success',
 
               texto:
-                modoModal === 'crear'
+                modoModal ===
+                'crear'
                   ? 'Vehículo agregado correctamente.'
                   : 'Vehículo actualizado correctamente.',
             }
           : {
-              tipo: 'danger',
+              tipo:
+                'danger',
+
               texto:
                 resultado.error,
             },
@@ -260,6 +463,11 @@ const ListaVehiculos = () => {
 
       return resultado
     }
+
+
+  /* =============================================================
+     ELIMINAR
+     ============================================================= */
 
   const confirmarEliminar =
     async () => {
@@ -286,23 +494,35 @@ const ListaVehiculos = () => {
       setMensaje(
         resultado.ok
           ? {
-              tipo: 'success',
+              tipo:
+                'success',
+
               texto:
                 'Vehículo eliminado correctamente.',
             }
           : {
-              tipo: 'danger',
+              tipo:
+                'danger',
+
               texto:
                 resultado.error,
             },
       )
     }
 
+
   return (
     <CCard className="mb-4 shadow-sm">
+
+      {/* ========================================================
+          CABECERA
+          ======================================================== */}
+
       <CCardHeader className="d-flex flex-wrap justify-content-between align-items-center gap-3">
+
         <div>
           <div className="d-flex align-items-center gap-2">
+
             <strong>
               Vehículos y propietarios
             </strong>
@@ -312,6 +532,7 @@ const ListaVehiculos = () => {
                 Administración
               </CBadge>
             )}
+
           </div>
 
           <div className="small text-body-secondary mt-1">
@@ -320,7 +541,9 @@ const ListaVehiculos = () => {
           </div>
         </div>
 
+
         <div className="d-flex gap-2">
+
           {puedeAdministrar && (
             <CButton
               color="primary"
@@ -339,10 +562,18 @@ const ListaVehiculos = () => {
           >
             Actualizar
           </CButton>
+
         </div>
+
       </CCardHeader>
 
+
       <CCardBody>
+
+        {/* ======================================================
+            MENSAJES
+            ====================================================== */}
+
         {mensaje && (
           <CAlert
             color={mensaje.tipo}
@@ -351,19 +582,35 @@ const ListaVehiculos = () => {
           </CAlert>
         )}
 
+
+        {/* ======================================================
+            SOLO LECTURA
+            ====================================================== */}
+
         {!puedeAdministrar && (
           <CAlert color="info">
+
             Este apartado se encuentra
             en modo de{' '}
+
             <strong>
               solo lectura
             </strong>
-            . Para modificar tu
+            .
+
+            {' '}
+
+            Para modificar tu
             información utiliza{' '}
+
             <strong>
               Mi perfil
-            </strong>{' '}
+            </strong>
+
+            {' '}
+
             o{' '}
+
             <strong>
               Mis vehículos
             </strong>
@@ -374,31 +621,36 @@ const ListaVehiculos = () => {
                 'normal' && (
                 <>
                   {' '}
-                  Tu cuenta tiene permisos
-                  administrativos, pero
-                  actualmente estás usando
-                  la Vista usuario.
+                  Tu cuenta tiene
+                  permisos administrativos,
+                  pero actualmente estás
+                  usando la Vista usuario.
                 </>
               )}
+
           </CAlert>
         )}
 
+
+        {/* ======================================================
+            BUSCADOR
+            ====================================================== */}
+
         <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
+
           <CFormInput
             type="search"
-
             placeholder="Buscar placa, vehículo o propietario..."
-
             value={busqueda}
-
-            onChange={(evento) =>
+            onChange={(
+              evento,
+            ) =>
               setBusqueda(
                 evento.target.value,
               )
             }
-
             style={{
-              maxWidth: 420,
+              maxWidth: 440,
             }}
           />
 
@@ -408,28 +660,57 @@ const ListaVehiculos = () => {
             }{' '}
             vehículos
           </span>
+
         </div>
+
+
+        {/* ======================================================
+            CARGANDO
+            ====================================================== */}
 
         {cargando && (
           <div className="text-center py-5">
-            <CSpinner color="success" />
+
+            <CSpinner
+              color="success"
+            />
 
             <p className="mt-3">
-              Cargando vehículos...
+              Cargando vehículos
+              y propietarios...
             </p>
+
           </div>
         )}
 
-        {!cargando && error && (
-          <CAlert color="danger">
-            No se pudieron cargar los
-            vehículos: {error}
-          </CAlert>
-        )}
+
+        {/* ======================================================
+            ERROR
+            ====================================================== */}
+
+        {!cargando &&
+          error && (
+            <CAlert color="danger">
+
+              No se pudieron cargar
+              los vehículos:
+
+              {' '}
+
+              {error}
+
+            </CAlert>
+          )}
+
+
+        {/* ======================================================
+            TABLA
+            ====================================================== */}
 
         {!cargando &&
           !error && (
             <>
+
               <CTable
                 align="middle"
                 bordered
@@ -437,10 +718,13 @@ const ListaVehiculos = () => {
                 responsive
                 striped
               >
+
                 <CTableHead color="light">
+
                   <CTableRow>
+
                     <CTableHeaderCell>
-                      Foto
+                      Foto vehículo
                     </CTableHeaderCell>
 
                     <CTableHeaderCell>
@@ -455,7 +739,11 @@ const ListaVehiculos = () => {
                       Año / color
                     </CTableHeaderCell>
 
-                    <CTableHeaderCell>
+                    <CTableHeaderCell
+                      style={{
+                        minWidth: 260,
+                      }}
+                    >
                       Propietario
                     </CTableHeaderCell>
 
@@ -474,13 +762,19 @@ const ListaVehiculos = () => {
                     <CTableHeaderCell>
                       Acciones
                     </CTableHeaderCell>
+
                   </CTableRow>
+
                 </CTableHead>
 
+
                 <CTableBody>
-                  {vehiculosPaginados.length ===
-                  0 ? (
+
+                  {vehiculosPaginados
+                    .length === 0 ? (
+
                     <CTableRow>
+
                       <CTableDataCell
                         colSpan={9}
                         className="text-center py-4"
@@ -488,42 +782,43 @@ const ListaVehiculos = () => {
                         No se encontraron
                         vehículos.
                       </CTableDataCell>
+
                     </CTableRow>
+
                   ) : (
+
                     vehiculosPaginados.map(
                       (
                         vehiculo,
                       ) => (
+
                         <CTableRow
                           key={
                             vehiculo.id
                           }
                         >
+
+                          {/* ================================
+                              FOTO VEHÍCULO
+                              ================================ */}
+
                           <CTableDataCell>
-                            <img
-                              src={
-                                vehiculo.foto_url
+
+                            <FotoVehiculo
+                              vehiculo={
+                                vehiculo
                               }
-
-                              alt={`${vehiculo.marca} ${vehiculo.modelo}`}
-
-                              width="90"
-
-                              height="60"
-
-                              loading="lazy"
-
-                              style={{
-                                objectFit:
-                                  'cover',
-
-                                borderRadius:
-                                  8,
-                              }}
                             />
+
                           </CTableDataCell>
 
+
+                          {/* ================================
+                              PLACA
+                              ================================ */}
+
                           <CTableDataCell>
+
                             <CBadge
                               color="dark"
                               className="fs-6"
@@ -532,9 +827,16 @@ const ListaVehiculos = () => {
                                 vehiculo.placa
                               }
                             </CBadge>
+
                           </CTableDataCell>
 
+
+                          {/* ================================
+                              VEHÍCULO
+                              ================================ */}
+
                           <CTableDataCell>
+
                             <strong>
                               {
                                 vehiculo.marca
@@ -546,9 +848,22 @@ const ListaVehiculos = () => {
                                 vehiculo.modelo
                               }
                             </div>
+
+                            <div className="small text-body-secondary">
+                              {
+                                vehiculo.tipo
+                              }
+                            </div>
+
                           </CTableDataCell>
 
+
+                          {/* ================================
+                              AÑO / COLOR
+                              ================================ */}
+
                           <CTableDataCell>
+
                             {
                               vehiculo.anio
                             }
@@ -558,21 +873,66 @@ const ListaVehiculos = () => {
                                 vehiculo.color
                               }
                             </div>
+
                           </CTableDataCell>
 
-                          <CTableDataCell>
-                            {
-                              vehiculo.propietario_nombre
-                            }
-                          </CTableDataCell>
+
+                          {/* ================================
+                              PROPIETARIO + FOTO
+                              ================================ */}
 
                           <CTableDataCell>
+
+                            <div className="d-flex align-items-center gap-3">
+
+                              <FotoPropietario
+                                nombre={
+                                  vehiculo.propietario_nombre
+                                }
+                                foto={
+                                  vehiculo.foto_propietario_url
+                                }
+                                size={54}
+                              />
+
+                              <div>
+
+                                <div className="fw-semibold">
+                                  {
+                                    vehiculo.propietario_nombre
+                                  }
+                                </div>
+
+                                <div className="small text-body-secondary">
+                                  Propietario
+                                </div>
+
+                              </div>
+
+                            </div>
+
+                          </CTableDataCell>
+
+
+                          {/* ================================
+                              CÉDULA
+                              ================================ */}
+
+                          <CTableDataCell>
+
                             {
                               vehiculo.cedula_enmascarada
                             }
+
                           </CTableDataCell>
 
+
+                          {/* ================================
+                              CORREO
+                              ================================ */}
+
                           <CTableDataCell>
+
                             <a
                               href={`mailto:${vehiculo.correo_institucional}`}
                             >
@@ -580,9 +940,16 @@ const ListaVehiculos = () => {
                                 vehiculo.correo_institucional
                               }
                             </a>
+
                           </CTableDataCell>
 
+
+                          {/* ================================
+                              ESTADO
+                              ================================ */}
+
                           <CTableDataCell>
+
                             <CBadge
                               color={
                                 vehiculo.autorizado
@@ -590,19 +957,29 @@ const ListaVehiculos = () => {
                                   : 'danger'
                               }
                             >
+
                               {vehiculo.autorizado
                                 ? 'Autorizado'
                                 : 'No autorizado'}
+
                             </CBadge>
+
                           </CTableDataCell>
 
+
+                          {/* ================================
+                              ACCIONES
+                              ================================ */}
+
                           <CTableDataCell>
+
                             {puedeAdministrar ? (
+
                               <div className="d-flex gap-2">
+
                                 <CButton
                                   size="sm"
                                   color="warning"
-
                                   onClick={() =>
                                     abrirEditar(
                                       vehiculo,
@@ -612,10 +989,10 @@ const ListaVehiculos = () => {
                                   Editar
                                 </CButton>
 
+
                                 <CButton
                                   size="sm"
                                   color="danger"
-
                                   onClick={() =>
                                     setVehiculoAEliminar(
                                       vehiculo,
@@ -624,40 +1001,60 @@ const ListaVehiculos = () => {
                                 >
                                   Eliminar
                                 </CButton>
+
                               </div>
+
                             ) : (
+
                               <span className="text-body-secondary small">
                                 Solo lectura
                               </span>
+
                             )}
+
                           </CTableDataCell>
+
                         </CTableRow>
+
                       ),
                     )
+
                   )}
+
                 </CTableBody>
+
               </CTable>
 
+
+              {/* ==================================================
+                  PAGINACIÓN
+                  ================================================== */}
+
               <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
+
                 <small className="text-body-secondary">
+
                   Página{' '}
-                  {paginaActual} de{' '}
+                  {paginaActual}{' '}
+                  de{' '}
                   {totalPaginas}
+
                 </small>
 
+
                 <div className="d-flex gap-2">
+
                   <CButton
                     color="secondary"
-
                     variant="outline"
-
                     disabled={
                       paginaActual === 1
                     }
-
                     onClick={() =>
                       setPagina(
-                        (valor) =>
+                        (
+                          valor,
+                        ) =>
                           Math.max(
                             1,
                             valor - 1,
@@ -668,19 +1065,19 @@ const ListaVehiculos = () => {
                     Anterior
                   </CButton>
 
+
                   <CButton
                     color="success"
-
                     variant="outline"
-
                     disabled={
                       paginaActual ===
                       totalPaginas
                     }
-
                     onClick={() =>
                       setPagina(
-                        (valor) =>
+                        (
+                          valor,
+                        ) =>
                           Math.min(
                             totalPaginas,
                             valor + 1,
@@ -690,22 +1087,32 @@ const ListaVehiculos = () => {
                   >
                     Siguiente
                   </CButton>
+
                 </div>
+
               </div>
+
             </>
           )}
+
       </CCardBody>
+
+
+      {/* ========================================================
+          FORMULARIO ADMIN
+          ======================================================== */}
 
       {puedeAdministrar && (
         <VehiculoFormModal
-          visible={modalAbierto}
-
-          modo={modoModal}
-
+          visible={
+            modalAbierto
+          }
+          modo={
+            modoModal
+          }
           vehiculoInicial={
             vehiculoSeleccionado
           }
-
           onClose={() => {
             setModalAbierto(false)
 
@@ -713,92 +1120,134 @@ const ListaVehiculos = () => {
               null,
             )
           }}
-
           onGuardar={
             manejarGuardar
           }
         />
       )}
 
+
+      {/* ========================================================
+          CONFIRMAR ELIMINACIÓN
+          ======================================================== */}
+
       <CModal
         visible={
           !!vehiculoAEliminar &&
           puedeAdministrar
         }
-
         onClose={() =>
           setVehiculoAEliminar(
             null,
           )
         }
-
         alignment="center"
       >
+
         <CModalHeader>
+
           <CModalTitle>
             Confirmar eliminación
           </CModalTitle>
+
         </CModalHeader>
 
+
         <CModalBody>
+
+          <div className="d-flex align-items-center gap-3 mb-3">
+
+            {vehiculoAEliminar && (
+
+              <FotoPropietario
+                nombre={
+                  vehiculoAEliminar
+                    .propietario_nombre
+                }
+                foto={
+                  vehiculoAEliminar
+                    .foto_propietario_url
+                }
+                size={60}
+              />
+
+            )}
+
+            <div>
+
+              <strong>
+                {
+                  vehiculoAEliminar
+                    ?.propietario_nombre
+                }
+              </strong>
+
+              <div className="text-body-secondary">
+
+                {
+                  vehiculoAEliminar
+                    ?.placa
+                }
+
+              </div>
+
+            </div>
+
+          </div>
+
+
           ¿Seguro que deseas eliminar
-          el vehículo{' '}
-
-          <strong>
-            {
-              vehiculoAEliminar?.placa
-            }
-          </strong>{' '}
-
-          de{' '}
-
-          <strong>
-            {
-              vehiculoAEliminar?.propietario_nombre
-            }
-          </strong>
-          ?
+          este vehículo?
 
           <br />
           <br />
 
           Esta acción no se puede
           deshacer.
+
         </CModalBody>
 
+
         <CModalFooter>
+
           <CButton
             color="secondary"
             variant="outline"
-
             onClick={() =>
               setVehiculoAEliminar(
                 null,
               )
             }
-
-            disabled={eliminando}
+            disabled={
+              eliminando
+            }
           >
             Cancelar
           </CButton>
 
+
           <CButton
             color="danger"
-
             onClick={
               confirmarEliminar
             }
-
-            disabled={eliminando}
+            disabled={
+              eliminando
+            }
           >
+
             {eliminando ? (
               <CSpinner size="sm" />
             ) : (
               'Sí, eliminar'
             )}
+
           </CButton>
+
         </CModalFooter>
+
       </CModal>
+
     </CCard>
   )
 }
