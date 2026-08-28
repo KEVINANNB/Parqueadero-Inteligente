@@ -14,33 +14,54 @@ import CIcon from '@coreui/icons-react'
 import {
   cilAccountLogout,
   cilCarAlt,
+  cilSettings,
   cilSpeedometer,
   cilUser,
 } from '@coreui/icons'
 
 import { useNavigate } from 'react-router-dom'
 
-import { useAuth } from '../context/AuthContext'
+import {
+  useAuth,
+} from '../context/AuthContext'
+
 import useMiCuenta from '../hooks/useMiCuenta'
 
 export default function UserMenu() {
-  const { usuario, rol, cerrarSesion } = useAuth()
-  const { perfil } = useMiCuenta()
+  const {
+    usuario,
+    rol,
+    esAdmin,
+    vistaActiva,
+    cambiarModoVista,
+    cerrarSesion,
+  } = useAuth()
+
+  const {
+    perfil,
+  } = useMiCuenta()
 
   const navigate = useNavigate()
 
-  if (!usuario) return null
+  if (!usuario) {
+    return null
+  }
 
-  const iniciales = perfil.nombre
-    ?.split(' ')
-    .slice(0, 2)
-    .map((palabra) => palabra[0])
-    .join('')
-    .toUpperCase()
+  const iniciales =
+    perfil.nombre
+      ?.split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((palabra) => palabra[0])
+      .join('')
+      .toUpperCase() || 'U'
 
   const salir = async () => {
     await cerrarSesion()
-    navigate('/')
+
+    navigate('/', {
+      replace: true,
+    })
   }
 
   return (
@@ -62,16 +83,21 @@ export default function UserMenu() {
             textColor="success"
             size="md"
           >
-            {iniciales || 'U'}
+            {iniciales}
           </CAvatar>
         )}
 
         <div className="d-none d-lg-block text-start">
-          <div className="fw-semibold">
+          <div className="fw-semibold text-white">
             {perfil.nombre}
           </div>
 
-          <small className="text-white-50">
+          <small
+            style={{
+              color:
+                'rgba(255,255,255,0.72)',
+            }}
+          >
             {perfil.correo}
           </small>
         </div>
@@ -79,9 +105,11 @@ export default function UserMenu() {
 
       <CDropdownMenu
         className="pt-0"
-        style={{ minWidth: 300 }}
+        style={{
+          minWidth: 320,
+        }}
       >
-        <CDropdownHeader className="bg-body-secondary py-3">
+        <CDropdownHeader className="py-3">
           <div className="d-flex align-items-center gap-3">
             {perfil.foto ? (
               <CAvatar
@@ -94,54 +122,153 @@ export default function UserMenu() {
                 textColor="white"
                 size="xl"
               >
-                {iniciales || 'U'}
+                {iniciales}
               </CAvatar>
             )}
 
-            <div>
+            <div className="overflow-hidden">
               <div className="fw-semibold">
                 {perfil.nombre}
               </div>
 
-              <div className="small text-body-secondary">
+              <div className="small text-body-secondary text-truncate">
                 {perfil.correo}
               </div>
 
-              <CBadge
-                color={rol === 'admin' ? 'danger' : 'success'}
-                className="mt-1"
-              >
-                {rol === 'admin'
-                  ? 'Administrador'
-                  : 'Usuario'}
-              </CBadge>
+              <div className="d-flex gap-1 flex-wrap mt-1">
+                <CBadge
+                  color={
+                    rol === 'admin'
+                      ? 'danger'
+                      : 'success'
+                  }
+                >
+                  {rol === 'admin'
+                    ? 'Administrador'
+                    : 'Usuario'}
+                </CBadge>
+
+                {esAdmin && (
+                  <CBadge
+                    color={
+                      vistaActiva === 'admin'
+                        ? 'warning'
+                        : 'secondary'
+                    }
+                  >
+                    {vistaActiva === 'admin'
+                      ? 'Vista admin'
+                      : 'Vista usuario'}
+                  </CBadge>
+                )}
+              </div>
             </div>
           </div>
         </CDropdownHeader>
 
         <CDropdownItem
           role="button"
-          onClick={() => navigate('/cuenta/perfil')}
+          onClick={() =>
+            navigate('/cuenta/perfil')
+          }
         >
-          <CIcon icon={cilUser} className="me-2" />
+          <CIcon
+            icon={cilUser}
+            className="me-2"
+          />
+
           Mi perfil
         </CDropdownItem>
 
         <CDropdownItem
           role="button"
-          onClick={() => navigate('/cuenta/vehiculos')}
+          onClick={() =>
+            navigate('/cuenta/vehiculos')
+          }
         >
-          <CIcon icon={cilCarAlt} className="me-2" />
+          <CIcon
+            icon={cilCarAlt}
+            className="me-2"
+          />
+
           Mis vehículos
         </CDropdownItem>
 
         <CDropdownItem
           role="button"
-          onClick={() => navigate('/estacionamiento')}
+          onClick={() =>
+            navigate('/estacionamiento')
+          }
         >
-          <CIcon icon={cilSpeedometer} className="me-2" />
+          <CIcon
+            icon={cilSpeedometer}
+            className="me-2"
+          />
+
           Ver parqueadero
         </CDropdownItem>
+
+        {esAdmin && (
+          <>
+            <CDropdownDivider />
+
+            <CDropdownHeader>
+              Cambiar modo
+            </CDropdownHeader>
+
+            <CDropdownItem
+              role="button"
+              className={
+                vistaActiva === 'normal'
+                  ? 'fw-semibold'
+                  : ''
+              }
+              onClick={() => {
+                cambiarModoVista('normal')
+                navigate('/')
+              }}
+            >
+              <CIcon
+                icon={cilUser}
+                className="me-2"
+              />
+
+              Vista usuario
+
+              {vistaActiva === 'normal' && (
+                <span className="ms-2">
+                  ✓
+                </span>
+              )}
+            </CDropdownItem>
+
+            <CDropdownItem
+              role="button"
+              className={
+                vistaActiva === 'admin'
+                  ? 'fw-semibold'
+                  : ''
+              }
+              onClick={() => {
+                cambiarModoVista('admin')
+                navigate('/')
+              }}
+            >
+              <CIcon
+                icon={cilSettings}
+                className="me-2"
+              />
+
+              Vista administrador
+
+              {vistaActiva === 'admin' && (
+                <span className="ms-2">
+                  ✓
+                </span>
+              )}
+            </CDropdownItem>
+          </>
+        )}
 
         <CDropdownDivider />
 
@@ -154,6 +281,7 @@ export default function UserMenu() {
             icon={cilAccountLogout}
             className="me-2"
           />
+
           Cerrar sesión
         </CDropdownItem>
       </CDropdownMenu>

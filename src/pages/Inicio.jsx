@@ -1,6 +1,9 @@
-import { Link } from 'react-router-dom'
+import {
+  Link,
+} from 'react-router-dom'
 
 import {
+  CAlert,
   CCard,
   CCardBody,
   CCol,
@@ -13,35 +16,14 @@ import {
   cilCarAlt,
   cilList,
   cilMap,
+  cilSettings,
   cilSpeedometer,
   cilUser,
 } from '@coreui/icons'
 
-import { useAuth } from '../context/AuthContext'
-
-const OPCIONES_BASE = [
-  {
-    titulo: 'Parqueadero',
-    descripcion:
-      'Consulta disponibilidad y estado de los espacios.',
-    icono: cilSpeedometer,
-    ruta: '/estacionamiento',
-  },
-  {
-    titulo: 'Vehículos y propietarios',
-    descripcion:
-      'Consulta los vehículos registrados y sus propietarios.',
-    icono: cilList,
-    ruta: '/parqueadero/vehiculos',
-  },
-  {
-    titulo: 'Mapa del campus',
-    descripcion:
-      'Consulta la ubicación del parqueadero UTEQ.',
-    icono: cilMap,
-    ruta: '/estacionamiento',
-  },
-]
+import {
+  useAuth,
+} from '../context/AuthContext'
 
 function TarjetaMenu({
   titulo,
@@ -78,11 +60,11 @@ function TarjetaMenu({
               </span>
             </div>
 
-            <h5 className="text-body mb-2">
+            <h5 className="mb-2">
               {titulo}
             </h5>
 
-            <p className="text-body-secondary small mb-0">
+            <p className="small mb-0">
               {descripcion}
             </p>
           </CCardBody>
@@ -93,38 +75,102 @@ function TarjetaMenu({
 }
 
 export default function Inicio() {
-  const { autenticado } = useAuth()
+  const {
+    autenticado,
+    esAdmin,
+    vistaActiva,
+    puedeAdministrar,
+  } = useAuth()
 
   const opciones = [
-    ...OPCIONES_BASE,
+    {
+      titulo: 'Parqueadero',
 
-    ...(autenticado
-      ? [
-          {
-            titulo: 'Mis vehículos',
-            descripcion:
-              'Consulta y modifica los datos de tus vehículos.',
-            icono: cilCarAlt,
-            ruta: '/cuenta/vehiculos',
-          },
-          {
-            titulo: 'Mi perfil',
-            descripcion:
-              'Consulta y actualiza tus datos personales.',
-            icono: cilUser,
-            ruta: '/cuenta/perfil',
-          },
-        ]
-      : [
-          {
-            titulo: 'Iniciar sesión',
-            descripcion:
-              'Accede a tu cuenta del Smart Parking.',
-            icono: cilUser,
-            ruta: '/login',
-          },
-        ]),
+      descripcion:
+        'Consulta la disponibilidad y el estado de los 80 espacios.',
+
+      icono: cilSpeedometer,
+
+      ruta: '/estacionamiento',
+    },
+
+    {
+      titulo:
+        'Vehículos y propietarios',
+
+      descripcion:
+        puedeAdministrar
+          ? 'Administra todos los vehículos y propietarios registrados.'
+          : 'Consulta los vehículos autorizados y sus propietarios.',
+
+      icono: cilList,
+
+      ruta:
+        '/parqueadero/vehiculos',
+    },
+
+    {
+      titulo: 'Mapa del campus',
+
+      descripcion:
+        'Consulta la ubicación del parqueadero dentro del campus UTEQ.',
+
+      icono: cilMap,
+
+      ruta: '/estacionamiento',
+    },
   ]
+
+  if (autenticado) {
+    opciones.push(
+      {
+        titulo: 'Mis vehículos',
+
+        descripcion:
+          'Consulta y modifica los vehículos asociados a tu cuenta.',
+
+        icono: cilCarAlt,
+
+        ruta: '/cuenta/vehiculos',
+      },
+
+      {
+        titulo: 'Mi perfil',
+
+        descripcion:
+          'Consulta y actualiza tus datos personales y fotografía.',
+
+        icono: cilUser,
+
+        ruta: '/cuenta/perfil',
+      },
+    )
+  } else {
+    opciones.push({
+      titulo: 'Iniciar sesión',
+
+      descripcion:
+        'Accede a tu cuenta del Smart Parking UTEQ.',
+
+      icono: cilUser,
+
+      ruta: '/login',
+    })
+  }
+
+  if (puedeAdministrar) {
+    opciones.push({
+      titulo: 'Administración',
+
+      descripcion:
+        'Acceso completo para crear, editar, autorizar y eliminar vehículos.',
+
+      icono: cilSettings,
+
+      ruta:
+        '/parqueadero/vehiculos',
+    })
+  }
 
   return (
     <div className="dashboard-sga">
@@ -138,10 +184,43 @@ export default function Inicio() {
         </h2>
 
         <p className="text-body-secondary">
-          Selecciona una opción para acceder
-          a los servicios del sistema.
+          Selecciona una opción para
+          acceder a los servicios del
+          sistema.
         </p>
       </div>
+
+      {esAdmin && (
+        <CAlert
+          color={
+            vistaActiva === 'admin'
+              ? 'warning'
+              : 'info'
+          }
+          className="mb-4"
+        >
+          {vistaActiva === 'admin' ? (
+            <>
+              Estás utilizando la{' '}
+              <strong>
+                Vista administrador
+              </strong>
+              . Tienes habilitados los
+              controles de administración
+              del sistema.
+            </>
+          ) : (
+            <>
+              Tu cuenta es administrador,
+              pero estás utilizando la{' '}
+              <strong>
+                Vista usuario
+              </strong>
+              .
+            </>
+          )}
+        </CAlert>
+      )}
 
       <CRow className="g-4">
         {opciones.map((opcion) => (
