@@ -1,75 +1,30 @@
-import {
-  CContainer,
-  CHeader,
-  CHeaderNav,
-  CNavItem,
-} from '@coreui/react'
-
-import {
-  Link,
-  NavLink,
-} from 'react-router-dom'
-
-import Logo from './Logo'
-import UserMenu from './UserMenu'
-
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Logo from './Logo'
 
 export default function AppHeader() {
-  const { usuario } = useAuth()
+  const { autenticado } = useAuth()
+  const navigate = useNavigate()
 
   return (
-    <CHeader
-      position="sticky"
-      className="app-header-sga border-bottom shadow-sm"
-    >
-      <CContainer fluid>
-        <Link
-          to="/"
-          className="d-flex align-items-center text-decoration-none"
-        >
-          <Logo width={210} height={48} />
-        </Link>
+    <header className="app-header-sga">
+      <div className="header-left">
+        <Logo width={180} height={42} />
+      </div>
 
-        <CHeaderNav className="ms-auto d-flex align-items-center gap-3">
-          <CNavItem>
-            <NavLink
-              to="/"
-              className={({ isActive }) =>
-                `header-link ${
-                  isActive ? 'active' : ''
-                }`
-              }
-            >
-              Inicio
-            </NavLink>
-          </CNavItem>
+      <nav className="header-nav">
+        <Link to="/" className="header-link">Inicio</Link>
+        <Link to="/parqueadero/vehiculos" className="header-link">Parqueadero</Link>
 
-          <CNavItem>
-            <NavLink
-              to="/estacionamiento"
-              className={({ isActive }) =>
-                `header-link ${
-                  isActive ? 'active' : ''
-                }`
-              }
-            >
-              Parqueadero
-            </NavLink>
-          </CNavItem>
-
-          {usuario ? (
-            <UserMenu />
-          ) : (
-            <NavLink
-              to="/login"
-              className="btn btn-light btn-sm"
-            >
-              Iniciar sesión
-            </NavLink>
-          )}
-        </CHeaderNav>
-      </CContainer>
-    </CHeader>
+        {!autenticado && (
+          <button
+            className="header-login-btn"
+            onClick={() => navigate('/login')}
+          >
+            Iniciar sesión
+          </button>
+        )}
+      </nav>
+    </header>
   )
 }

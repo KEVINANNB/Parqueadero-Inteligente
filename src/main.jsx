@@ -1,50 +1,20 @@
-import React
-  from 'react'
-
-import ReactDOM
-  from 'react-dom/client'
-
-import {
-  BrowserRouter,
-} from 'react-router-dom'
-
-import App
-  from './App.jsx'
-
-import {
-  AuthProvider,
-} from './context/AuthContext.jsx'
-
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import App from './App.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
 
 import '@coreui/coreui/dist/css/coreui.min.css'
-
 import './App.css'
-
+import './login.css'
 import './tema-claro.css'
 
-import './login.css'
-
-
-ReactDOM
-  .createRoot(
-    document.getElementById(
-      'root',
-    ),
-  )
-  .render(
-
-    <React.StrictMode>
-
-      <BrowserRouter>
-
-        <AuthProvider>
-
-          <App />
-
-        </AuthProvider>
-
-      </BrowserRouter>
-
-    </React.StrictMode>,
-
-  )
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
+  </React.StrictMode>,
+)
