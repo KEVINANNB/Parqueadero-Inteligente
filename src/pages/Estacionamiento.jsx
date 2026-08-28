@@ -84,7 +84,7 @@ export default function Estacionamiento() {
         await descargarJsonRTDB()
 
       } catch (
-        errorDescarga
+      errorDescarga
       ) {
 
         console.error(
@@ -118,23 +118,23 @@ export default function Estacionamiento() {
           const coincideEstado =
 
             filtros.estado ===
-              'todos'
+            'todos'
 
             ||
 
             espacio.estado ===
-              filtros.estado
+            filtros.estado
 
 
           const coincideColumna =
 
             filtros.columna ===
-              'todas'
+            'todas'
 
             ||
 
             espacio.columna ===
-              filtros.columna
+            filtros.columna
 
 
           return (
@@ -434,7 +434,9 @@ export default function Estacionamiento() {
           </div>
 
 
-          <MapaEstacionamiento />
+          <MapaEstacionamiento
+            espacios={espacios}
+          />
 
         </div>
 

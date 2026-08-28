@@ -10,7 +10,8 @@ import {
   CRow,
 } from '@coreui/react'
 
-import CIcon from '@coreui/icons-react'
+import CIcon
+  from '@coreui/icons-react'
 
 import {
   cilCarAlt,
@@ -24,6 +25,7 @@ import {
 import {
   useAuth,
 } from '../context/AuthContext'
+
 
 function TarjetaMenu({
   titulo,
@@ -43,14 +45,20 @@ function TarjetaMenu({
         className="text-decoration-none"
       >
         <CCard className="menu-sga-card h-100 shadow-sm">
+
           <CCardBody>
+
             <div className="d-flex justify-content-between align-items-start mb-3">
+
               <div className="menu-sga-icon">
+
                 <CIcon
                   icon={icono}
                   size="xl"
                 />
+
               </div>
+
 
               <span
                 className="text-warning"
@@ -58,21 +66,27 @@ function TarjetaMenu({
               >
                 ★
               </span>
+
             </div>
+
 
             <h5 className="mb-2">
               {titulo}
             </h5>
 
+
             <p className="small mb-0">
               {descripcion}
             </p>
+
           </CCardBody>
+
         </CCard>
       </Link>
     </CCol>
   )
 }
+
 
 export default function Inicio() {
   const {
@@ -82,17 +96,23 @@ export default function Inicio() {
     puedeAdministrar,
   } = useAuth()
 
+
   const opciones = [
+
     {
-      titulo: 'Parqueadero',
+      titulo:
+        'Parqueadero',
 
       descripcion:
         'Consulta la disponibilidad y el estado de los 80 espacios.',
 
-      icono: cilSpeedometer,
+      icono:
+        cilSpeedometer,
 
-      ruta: '/estacionamiento',
+      ruta:
+        '/estacionamiento',
     },
+
 
     {
       titulo:
@@ -103,133 +123,192 @@ export default function Inicio() {
           ? 'Administra todos los vehículos y propietarios registrados.'
           : 'Consulta los vehículos autorizados y sus propietarios.',
 
-      icono: cilList,
+      icono:
+        cilList,
 
       ruta:
         '/parqueadero/vehiculos',
     },
 
+
     {
-      titulo: 'Mapa del campus',
+      titulo:
+        'Mapa del parqueadero',
 
       descripcion:
-        'Consulta la ubicación del parqueadero dentro del campus UTEQ.',
+        'Visualiza los 80 espacios sobre el mapa del campus y consulta cada puesto.',
 
-      icono: cilMap,
+      icono:
+        cilMap,
 
-      ruta: '/estacionamiento',
+      ruta:
+        '/parqueadero/mapa',
     },
+
   ]
+
 
   if (autenticado) {
     opciones.push(
+
       {
-        titulo: 'Mis vehículos',
+        titulo:
+          'Mis vehículos',
 
         descripcion:
           'Consulta y modifica los vehículos asociados a tu cuenta.',
 
-        icono: cilCarAlt,
+        icono:
+          cilCarAlt,
 
-        ruta: '/cuenta/vehiculos',
+        ruta:
+          '/cuenta/vehiculos',
       },
 
+
       {
-        titulo: 'Mi perfil',
+        titulo:
+          'Mi perfil',
 
         descripcion:
           'Consulta y actualiza tus datos personales y fotografía.',
 
-        icono: cilUser,
+        icono:
+          cilUser,
 
-        ruta: '/cuenta/perfil',
+        ruta:
+          '/cuenta/perfil',
       },
+
     )
   } else {
     opciones.push({
-      titulo: 'Iniciar sesión',
+
+      titulo:
+        'Iniciar sesión',
 
       descripcion:
         'Accede a tu cuenta del Smart Parking UTEQ.',
 
-      icono: cilUser,
+      icono:
+        cilUser,
 
-      ruta: '/login',
+      ruta:
+        '/login',
+
     })
   }
 
+
   if (puedeAdministrar) {
     opciones.push({
-      titulo: 'Administración',
+
+      titulo:
+        'Administración',
 
       descripcion:
         'Acceso completo para crear, editar, autorizar y eliminar vehículos.',
 
-      icono: cilSettings,
+      icono:
+        cilSettings,
 
       ruta:
         '/parqueadero/vehiculos',
+
     })
   }
 
+
   return (
     <div className="dashboard-sga">
+
       <div className="mb-4">
+
         <small className="text-success fw-semibold">
           UTEQ SMART PARKING
         </small>
 
+
         <h2 className="mt-1 mb-2">
           Menú principal
         </h2>
+
 
         <p className="text-body-secondary">
           Selecciona una opción para
           acceder a los servicios del
           sistema.
         </p>
+
       </div>
 
+
       {esAdmin && (
+
         <CAlert
           color={
-            vistaActiva === 'admin'
+            vistaActiva ===
+            'admin'
               ? 'warning'
               : 'info'
           }
           className="mb-4"
         >
-          {vistaActiva === 'admin' ? (
+
+          {vistaActiva ===
+          'admin' ? (
+
             <>
               Estás utilizando la{' '}
+
               <strong>
                 Vista administrador
               </strong>
+
               . Tienes habilitados los
               controles de administración
               del sistema.
             </>
+
           ) : (
+
             <>
               Tu cuenta es administrador,
               pero estás utilizando la{' '}
+
               <strong>
                 Vista usuario
               </strong>
+
               .
             </>
+
           )}
+
         </CAlert>
+
       )}
 
+
       <CRow className="g-4">
-        {opciones.map((opcion) => (
-          <TarjetaMenu
-            key={opcion.titulo}
-            {...opcion}
-          />
-        ))}
+
+        {opciones.map(
+          (
+            opcion,
+          ) => (
+
+            <TarjetaMenu
+              key={
+                opcion.titulo
+              }
+              {...opcion}
+            />
+
+          ),
+        )}
+
       </CRow>
+
     </div>
   )
 }
