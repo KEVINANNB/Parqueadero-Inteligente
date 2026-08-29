@@ -1,393 +1,146 @@
 import {
   useCallback,
-  useEffect,
   useMemo,
-  useState,
 } from 'react'
-
-import {
-  onValue,
-  ref,
-} from 'firebase/database'
-
-import {
-  db,
-} from '../services/firebase'
 
 import {
   supabase,
 } from '../lib/supabase'
 
+import usePuestos
+  from './usePuestos'
+
 
 export default function useEspacio(
   id,
 ) {
-  const [
-    espacioFirebase,
-    setEspacioFirebase,
-  ] =
-    useState(null)
-
-
-  const [
-    puestoSupabase,
-    setPuestoSupabase,
-  ] =
-    useState(null)
-
-
-  const [
-    ocupacion,
-    setOcupacion,
-  ] =
-    useState(null)
-
-
-  const [
-    cargandoFirebase,
-    setCargandoFirebase,
-  ] =
-    useState(true)
-
-
-  const [
-    cargandoSupabase,
-    setCargandoSupabase,
-  ] =
-    useState(true)
-
-
-  const [
+  const {
+    espacios,
+    cargando,
     error,
-    setError,
-  ] =
-    useState(null)
+    recargarRelaciones,
+  } =
+    usePuestos()
 
 
-  /* =============================================================
-     FIREBASE
-     ============================================================= */
+  /* ==============================================================
+     ENCONTRAR ESPACIO EN LA CACHÉ GLOBAL
+     ============================================================== */
 
-  useEffect(() => {
-
-    if (!id) {
-      return
-    }
-
-
-    setCargandoFirebase(
-      true,
-    )
-
-
-    const espacioRef =
-      ref(
-        db,
-        `espacios/${id}`,
-      )
-
-
-    const unsubscribe =
-      onValue(
-
-        espacioRef,
-
-        (
-          snapshot,
-        ) => {
-
-          setEspacioFirebase(
-            snapshot.val(),
-          )
-
-          setCargandoFirebase(
-            false,
-          )
-
-        },
-
-        (
-          errorFirebase,
-        ) => {
-
-          console.error(
-            errorFirebase,
-          )
-
-          setError(
-            errorFirebase,
-          )
-
-          setCargandoFirebase(
-            false,
-          )
-
-        },
-
-      )
-
-
-    return () =>
-      unsubscribe()
-
-  }, [
-    id,
-  ])
-
-
-  /* =============================================================
-     SUPABASE
-     ============================================================= */
-
-  const cargarRelacion =
-    useCallback(
-      async () => {
-
-        if (!id) {
-          return
-        }
-
-
-        setCargandoSupabase(
-          true,
-        )
-
-
-        /*
-         * -------------------------------------------------------
-         * PUESTO
-         * -------------------------------------------------------
-         */
-
-        const {
-          data:
-            puesto,
-
-          error:
-            errorPuesto,
-
-        } =
-          await supabase
-            .from('puestos')
-            .select(`
-              id,
-              codigo_integracion,
-              sensor_id_rtdb,
-              integracion_activa
-            `)
-            .eq(
-              'sensor_id_rtdb',
-              id,
-            )
-            .maybeSingle()
-
+  const espacio =
+    useMemo(
+      () => {
 
         if (
-          errorPuesto
+          !id
         ) {
-
-          setError(
-            errorPuesto,
-          )
-
-          setCargandoSupabase(
-            false,
-          )
-
-          return
+          return null
         }
 
 
-        setPuestoSupabase(
-          puesto,
-        )
-
-
-        if (!puesto) {
-
-          setOcupacion(
-            null,
-          )
-
-          setCargandoSupabase(
-            false,
-          )
-
-          return
-        }
-
-
-        /*
-         * -------------------------------------------------------
-         * OCUPACIÓN
-         * -------------------------------------------------------
-         */
-
-        const {
-          data:
-            ocupacionData,
-
-          error:
-            errorOcupacion,
-
-        } =
-          await supabase
-            .from(
-              'ocupaciones_puestos_actuales',
-            )
-            .select(`
+        return (
+          espacios.find(
+            (
+              item,
+            ) =>
+              item.id ===
               id,
-              puesto_id,
-              vehiculo_id,
-              fecha_asignacion,
-              observacion
-            `)
-            .eq(
-              'puesto_id',
-              puesto.id,
-            )
-            .maybeSingle()
-
-
-        if (
-          errorOcupacion
-        ) {
-
-          setError(
-            errorOcupacion,
           )
-
-          setCargandoSupabase(
-            false,
-          )
-
-          return
-        }
-
-
-        if (
-          !ocupacionData
-        ) {
-
-          setOcupacion(
-            null,
-          )
-
-          setCargandoSupabase(
-            false,
-          )
-
-          return
-        }
-
-
-        /*
-         * -------------------------------------------------------
-         * VEHÍCULO
-         * -------------------------------------------------------
-         */
-
-        const {
-          data:
-            vehiculo,
-
-          error:
-            errorVehiculo,
-
-        } =
-          await supabase
-            .from('vehiculos')
-            .select(`
-              id,
-              placa,
-              marca,
-              modelo,
-              anio,
-              color,
-              tipo,
-              foto_url,
-              foto_propietario_url,
-              propietario_nombre,
-              correo_institucional,
-              cedula_enmascarada,
-              autorizado
-            `)
-            .eq(
-              'id',
-              ocupacionData
-                .vehiculo_id,
-            )
-            .maybeSingle()
-
-
-        if (
-          errorVehiculo
-        ) {
-
-          setError(
-            errorVehiculo,
-          )
-
-          setCargandoSupabase(
-            false,
-          )
-
-          return
-        }
-
-
-        setOcupacion({
-
-          ...ocupacionData,
-
-          vehiculo:
-            vehiculo ||
-            null,
-
-        })
-
-
-        setCargandoSupabase(
-          false,
+          ||
+          null
         )
 
       },
       [
+        espacios,
         id,
       ],
     )
 
 
-  useEffect(() => {
+  /* ==============================================================
+     RESERVAR COMO PROPIETARIO
+     ============================================================== */
 
-    cargarRelacion()
-
-  }, [
-    cargarRelacion,
-  ])
-
-
-  /* =============================================================
-     ASIGNAR VEHÍCULO
-     ============================================================= */
-
-  const asignarVehiculo =
+  const reservarVehiculo =
     useCallback(
-
       async (
         vehiculoId,
       ) => {
 
         if (
-          !puestoSupabase
-            ?.id
+          !espacio
+            ?.puesto_id
         ) {
 
           return {
-            ok: false,
+
+            ok:
+              false,
 
             error:
-              'El puesto no está vinculado con Supabase.',
+              'Este espacio no está vinculado correctamente con Supabase.',
+
+          }
+
+        }
+
+
+        /*
+         * No escribimos nada en Firebase.
+         *
+         * Firebase continúa siendo la
+         * lectura física del sensor.
+         */
+
+        if (
+          espacio
+            .estado_sensor !==
+          'libre'
+        ) {
+
+          return {
+
+            ok:
+              false,
+
+            error:
+              'El sensor indica que este espacio está ocupado.',
+
+          }
+
+        }
+
+
+        if (
+          espacio.reserva
+        ) {
+
+          return {
+
+            ok:
+              false,
+
+            error:
+              'Este espacio ya posee una reserva.',
+
+          }
+
+        }
+
+
+        if (
+          espacio.ocupacion
+        ) {
+
+          return {
+
+            ok:
+              false,
+
+            error:
+              'Este espacio ya tiene un vehículo asignado.',
+
           }
 
         }
@@ -396,7 +149,163 @@ export default function useEspacio(
         const {
           error:
             errorRpc,
+        } =
+          await supabase
+            .rpc(
+              'reservar_mi_puesto',
+              {
 
+                p_puesto_id:
+                  espacio.puesto_id,
+
+                p_vehiculo_id:
+                  Number(
+                    vehiculoId,
+                  ),
+
+              },
+            )
+
+
+        if (
+          errorRpc
+        ) {
+
+          return {
+
+            ok:
+              false,
+
+            error:
+              errorRpc.message,
+
+          }
+
+        }
+
+
+        await recargarRelaciones()
+
+
+        return {
+          ok:
+            true,
+        }
+
+      },
+      [
+        espacio,
+        recargarRelaciones,
+      ],
+    )
+
+
+  /* ==============================================================
+     CANCELAR / FINALIZAR RESERVA
+     ============================================================== */
+
+  const cancelarReserva =
+    useCallback(
+      async () => {
+
+        if (
+          !espacio
+            ?.puesto_id
+        ) {
+
+          return {
+
+            ok:
+              false,
+
+            error:
+              'Este espacio no está vinculado correctamente.',
+
+          }
+
+        }
+
+
+        const {
+          error:
+            errorRpc,
+        } =
+          await supabase
+            .rpc(
+              'cancelar_mi_reserva',
+              {
+
+                p_puesto_id:
+                  espacio.puesto_id,
+
+              },
+            )
+
+
+        if (
+          errorRpc
+        ) {
+
+          return {
+
+            ok:
+              false,
+
+            error:
+              errorRpc.message,
+
+          }
+
+        }
+
+
+        await recargarRelaciones()
+
+
+        return {
+          ok:
+            true,
+        }
+
+      },
+      [
+        espacio,
+        recargarRelaciones,
+      ],
+    )
+
+
+  /* ==============================================================
+     FUNCIÓN ADMIN ANTIGUA
+     ============================================================== */
+
+  const asignarVehiculo =
+    useCallback(
+      async (
+        vehiculoId,
+      ) => {
+
+        if (
+          !espacio
+            ?.puesto_id
+        ) {
+
+          return {
+
+            ok:
+              false,
+
+            error:
+              'El puesto no está vinculado con Supabase.',
+
+          }
+
+        }
+
+
+        const {
+          error:
+            errorRpc,
         } =
           await supabase
             .rpc(
@@ -404,7 +313,7 @@ export default function useEspacio(
               {
 
                 p_puesto_id:
-                  puestoSupabase.id,
+                  espacio.puesto_id,
 
                 p_vehiculo_id:
                   vehiculoId,
@@ -419,7 +328,8 @@ export default function useEspacio(
 
           return {
 
-            ok: false,
+            ok:
+              false,
 
             error:
               errorRpc.message,
@@ -429,41 +339,43 @@ export default function useEspacio(
         }
 
 
-        await cargarRelacion()
+        await recargarRelaciones()
 
 
         return {
-          ok: true,
+          ok:
+            true,
         }
 
       },
-
       [
-        puestoSupabase,
-        cargarRelacion,
+        espacio,
+        recargarRelaciones,
       ],
-
     )
 
 
-  /* =============================================================
-     LIBERAR VÍNCULO
-     ============================================================= */
+  /* ==============================================================
+     LIBERAR ADMIN
+     ============================================================== */
 
   const liberarVehiculo =
     useCallback(
       async () => {
 
         if (
-          !puestoSupabase
-            ?.id
+          !espacio
+            ?.puesto_id
         ) {
 
           return {
-            ok: false,
+
+            ok:
+              false,
 
             error:
               'El puesto no está vinculado con Supabase.',
+
           }
 
         }
@@ -472,7 +384,6 @@ export default function useEspacio(
         const {
           error:
             errorRpc,
-
         } =
           await supabase
             .rpc(
@@ -480,7 +391,7 @@ export default function useEspacio(
               {
 
                 p_puesto_id:
-                  puestoSupabase.id,
+                  espacio.puesto_id,
 
               },
             )
@@ -492,7 +403,8 @@ export default function useEspacio(
 
           return {
 
-            ok: false,
+            ok:
+              false,
 
             error:
               errorRpc.message,
@@ -502,102 +414,38 @@ export default function useEspacio(
         }
 
 
-        await cargarRelacion()
+        await recargarRelaciones()
 
 
         return {
-          ok: true,
+          ok:
+            true,
         }
 
       },
-
       [
-        puestoSupabase,
-        cargarRelacion,
+        espacio,
+        recargarRelaciones,
       ],
-
     )
-
-
-  /* =============================================================
-     OBJETO FINAL
-     ============================================================= */
-
-  const espacio =
-    useMemo(() => {
-
-      if (
-        !espacioFirebase
-      ) {
-        return null
-      }
-
-
-      return {
-
-        ...espacioFirebase,
-
-
-        puesto_id:
-          puestoSupabase
-            ?.id
-          ||
-          null,
-
-
-        codigo_puesto:
-          puestoSupabase
-            ?.codigo_integracion
-          ||
-          espacioFirebase
-            .etiqueta,
-
-
-        ocupacion,
-
-
-        vehiculo:
-          ocupacion
-            ?.vehiculo
-          ||
-          null,
-
-
-        identificado:
-          Boolean(
-            ocupacion
-              ?.vehiculo,
-          ),
-
-      }
-
-    }, [
-      espacioFirebase,
-      puestoSupabase,
-      ocupacion,
-    ])
 
 
   return {
 
     espacio,
 
-
-    cargando:
-      cargandoFirebase
-      ||
-      cargandoSupabase,
-
+    cargando,
 
     error,
 
-
     recargarRelacion:
-      cargarRelacion,
+      recargarRelaciones,
 
+    reservarVehiculo,
+
+    cancelarReserva,
 
     asignarVehiculo,
-
 
     liberarVehiculo,
 

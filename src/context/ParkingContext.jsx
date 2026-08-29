@@ -13,26 +13,15 @@ import {
 } from '../lib/supabase'
 
 
-/* ================================================================
-   CONTEXTO
-   ================================================================ */
-
 const ParkingContext =
   createContext(null)
 
-
-/* ================================================================
-   PROVIDER
-   ================================================================ */
 
 export function ParkingProvider({
   children,
 }) {
   /* ==============================================================
-     ACTIVACIÓN DIFERIDA
-
-     El sistema NO conecta Firebase ni consulta los puestos hasta que
-     alguna página realmente llama a usePuestos().
+     ACTIVACIÓN
      ============================================================== */
 
   const [
@@ -110,11 +99,6 @@ export function ParkingProvider({
     useState(false)
 
 
-  /*
-   * Evita determinadas condiciones de carrera
-   * cuando se pulsan varias actualizaciones.
-   */
-
   const solicitudActualRef =
     useRef(0)
 
@@ -139,15 +123,10 @@ export function ParkingProvider({
             }
 
 
-            /*
-             * Dejamos cargando desde este
-             * mismo render para evitar un
-             * pequeño parpadeo de datos vacíos.
-             */
-
             setCargandoFirebase(
               true,
             )
+
 
             setCargandoSupabase(
               true,
@@ -165,7 +144,7 @@ export function ParkingProvider({
 
 
   /* ==============================================================
-     FIREBASE
+     FIREBASE EN TIEMPO REAL
      ============================================================== */
 
   useEffect(
@@ -178,7 +157,9 @@ export function ParkingProvider({
       }
 
 
-      let unsubscribe = null
+      let unsubscribe =
+        null
+
 
       let cancelado =
         false
@@ -188,14 +169,6 @@ export function ParkingProvider({
         async () => {
 
           try {
-
-            /*
-             * Firebase se importa dinámicamente.
-             *
-             * Esto significa que el paquete de Firebase
-             * no tiene que cargarse al abrir el menú
-             * principal.
-             */
 
             const [
               firebaseDatabase,
@@ -338,13 +311,16 @@ export function ParkingProvider({
             if (
               !cancelado
             ) {
+
               setErrorFirebase(
                 error,
               )
 
+
               setCargandoFirebase(
                 false,
               )
+
             }
 
           }
@@ -378,7 +354,8 @@ export function ParkingProvider({
 
 
   /* ==============================================================
-     CARGAR RELACIONES SUPABASE
+     SUPABASE:
+     PUESTOS + OCUPACIONES + RESERVAS + VEHÍCULOS
      ============================================================== */
 
   const cargarRelaciones =
@@ -386,10 +363,6 @@ export function ParkingProvider({
       async ({
         mostrarCarga = true,
       } = {}) => {
-
-        /*
-         * Número único para esta ejecución.
-         */
 
         const solicitud =
           ++solicitudActualRef.current
@@ -417,22 +390,13 @@ export function ParkingProvider({
         try {
 
           /* =====================================================
-             PUESTOS + OCUPACIONES EN PARALELO
-
-             Antes:
-               puestos
-                 ↓
-               ocupaciones
-
-             Ahora:
-               puestos ───────┐
-                              ├── al mismo tiempo
-               ocupaciones ───┘
+             TRES CONSULTAS EN PARALELO
              ===================================================== */
 
           const [
             resultadoPuestos,
             resultadoOcupaciones,
+            resultadoReservas,
           ] =
             await Promise.all([
 
@@ -464,6 +428,21 @@ export function ParkingProvider({
                   puesto_id,
                   vehiculo_id,
                   fecha_asignacion,
+                  asignado_por,
+                  observacion
+                `),
+
+
+              supabase
+                .from(
+                  'reservas_puestos_actuales',
+                )
+                .select(`
+                  id,
+                  puesto_id,
+                  vehiculo_id,
+                  usuario_id,
+                  fecha_reserva,
                   observacion
                 `),
 
@@ -477,10 +456,6 @@ export function ParkingProvider({
             return
           }
 
-
-          /* =====================================================
-             ERRORES
-             ===================================================== */
 
           if (
             resultadoPuestos.error
@@ -500,6 +475,15 @@ export function ParkingProvider({
           }
 
 
+          if (
+            resultadoReservas.error
+          ) {
+            throw (
+              resultadoReservas.error
+            )
+          }
+
+
           const puestosData =
             resultadoPuestos.data ||
             []
@@ -510,34 +494,42 @@ export function ParkingProvider({
             []
 
 
-          /* =====================================================
-             IDS VEHÍCULOS RELACIONADOS
-             ===================================================== */
-
-          const vehiculoIds = [
-
-            ...new Set(
-
-              ocupacionesData
-                .map(
-                  (
-                    ocupacion,
-                  ) =>
-                    ocupacion
-                      .vehiculo_id,
-                )
-                .filter(
-                  Boolean,
-                ),
-
-            ),
-
-          ]
+          const reservasData =
+            resultadoReservas.data ||
+            []
 
 
           /* =====================================================
-             SOLO CONSULTAR VEHÍCULOS QUE REALMENTE APARECEN
+             VEHÍCULOS UTILIZADOS
              ===================================================== */
+
+          const vehiculoIds =
+            [
+              ...new Set([
+
+                ...ocupacionesData
+                  .map(
+                    (
+                      ocupacion,
+                    ) =>
+                      ocupacion
+                        .vehiculo_id,
+                  ),
+
+                ...reservasData
+                  .map(
+                    (
+                      reserva,
+                    ) =>
+                      reserva
+                        .vehiculo_id,
+                  ),
+
+              ].filter(
+                Boolean,
+              )),
+            ]
+
 
           let vehiculosData =
             []
@@ -558,6 +550,7 @@ export function ParkingProvider({
                 )
                 .select(`
                   id,
+                  usuario_id,
                   placa,
                   marca,
                   modelo,
@@ -599,7 +592,7 @@ export function ParkingProvider({
 
 
           /* =====================================================
-             MAPAS DE BÚSQUEDA
+             MAPA VEHÍCULOS
              ===================================================== */
 
           const vehiculosPorId =
@@ -619,6 +612,10 @@ export function ParkingProvider({
 
             )
 
+
+          /* =====================================================
+             MAPA OCUPACIONES
+             ===================================================== */
 
           const ocupacionesPorPuesto =
             new Map(
@@ -649,6 +646,38 @@ export function ParkingProvider({
 
 
           /* =====================================================
+             MAPA RESERVAS
+             ===================================================== */
+
+          const reservasPorPuesto =
+            new Map(
+
+              reservasData.map(
+                (
+                  reserva,
+                ) => [
+
+                  reserva
+                    .puesto_id,
+
+                  {
+                    ...reserva,
+
+                    vehiculo:
+                      vehiculosPorId.get(
+                        reserva
+                          .vehiculo_id,
+                      ) ||
+                      null,
+                  },
+
+                ],
+              ),
+
+            )
+
+
+          /* =====================================================
              PUESTOS COMPLETOS
              ===================================================== */
 
@@ -660,8 +689,16 @@ export function ParkingProvider({
 
                 ...puesto,
 
+
                 ocupacion:
                   ocupacionesPorPuesto.get(
+                    puesto.id,
+                  ) ||
+                  null,
+
+
+                reserva:
+                  reservasPorPuesto.get(
                     puesto.id,
                   ) ||
                   null,
@@ -709,13 +746,16 @@ export function ParkingProvider({
             solicitud ===
             solicitudActualRef.current
           ) {
+
             setCargandoSupabase(
               false,
             )
 
+
             setActualizando(
               false,
             )
+
           }
 
         }
@@ -726,7 +766,7 @@ export function ParkingProvider({
 
 
   /* ==============================================================
-     PRIMERA CARGA SUPABASE
+     PRIMERA CARGA
      ============================================================== */
 
   useEffect(
@@ -750,7 +790,102 @@ export function ParkingProvider({
 
 
   /* ==============================================================
-     RECARGAR MANUALMENTE
+     SUPABASE REALTIME
+
+     Si otro usuario reserva/cancela:
+     todos los mapas se actualizan.
+     ============================================================== */
+
+  useEffect(
+    () => {
+
+      if (
+        !activo
+      ) {
+        return undefined
+      }
+
+
+      const canal =
+        supabase
+          .channel(
+            'smart-parking-relaciones',
+          )
+
+          .on(
+
+            'postgres_changes',
+
+            {
+              event:
+                '*',
+
+              schema:
+                'public',
+
+              table:
+                'reservas_puestos_actuales',
+            },
+
+            () => {
+
+              cargarRelaciones({
+                mostrarCarga:
+                  false,
+              })
+
+            },
+
+          )
+
+          .on(
+
+            'postgres_changes',
+
+            {
+              event:
+                '*',
+
+              schema:
+                'public',
+
+              table:
+                'ocupaciones_puestos_actuales',
+            },
+
+            () => {
+
+              cargarRelaciones({
+                mostrarCarga:
+                  false,
+              })
+
+            },
+
+          )
+
+          .subscribe()
+
+
+      return () => {
+
+        supabase
+          .removeChannel(
+            canal,
+          )
+
+      }
+
+    },
+    [
+      activo,
+      cargarRelaciones,
+    ],
+  )
+
+
+  /* ==============================================================
+     ACTUALIZACIÓN MANUAL
      ============================================================== */
 
   const recargarRelaciones =
@@ -760,9 +895,11 @@ export function ParkingProvider({
         if (
           !activo
         ) {
+
           activar()
 
           return
+
         }
 
 
@@ -781,7 +918,7 @@ export function ParkingProvider({
 
 
   /* ==============================================================
-     UNIR FIREBASE + SUPABASE
+     FIREBASE + SUPABASE
      ============================================================== */
 
   const espacios =
@@ -818,14 +955,201 @@ export function ParkingProvider({
               )
 
 
+            const ocupacion =
+              puesto
+                ?.ocupacion
+              ||
+              null
+
+
+            const reserva =
+              puesto
+                ?.reserva
+              ||
+              null
+
+
+            const estadoSensor =
+              espacio.estado ||
+              null
+
+
+            const ocupadoFisicamente =
+              estadoSensor ===
+              'ocupado'
+
+
+            const reservado =
+              Boolean(
+                reserva,
+              )
+
+
+            const asignado =
+              Boolean(
+                ocupacion,
+              )
+
+
+            /*
+             * Vehículo identificado:
+             *
+             * 1. ocupación actual
+             * 2. reserva
+             */
+
+            const vehiculo =
+              ocupacion
+                ?.vehiculo
+              ||
+              reserva
+                ?.vehiculo
+              ||
+              null
+
+
+            /*
+             * Un espacio es realmente
+             * DISPONIBLE solamente cuando:
+             *
+             * - sensor = libre
+             * - sin ocupación
+             * - sin reserva
+             */
+
+            const disponible =
+              estadoSensor ===
+                'libre'
+
+              &&
+
+              !reservado
+
+              &&
+
+              !asignado
+
+
+            /* =================================================
+               ESTADO OPERATIVO
+               ================================================= */
+
+            let estadoOperativo =
+              'sin_datos'
+
+
+            if (
+              estadoSensor ===
+              'libre'
+            ) {
+
+              if (
+                reservado
+              ) {
+
+                estadoOperativo =
+                  'reservado'
+
+              } else if (
+                asignado
+              ) {
+
+                estadoOperativo =
+                  'asignado'
+
+              } else {
+
+                estadoOperativo =
+                  'disponible'
+
+              }
+
+            }
+
+
+            if (
+              ocupadoFisicamente
+            ) {
+
+              if (
+                vehiculo
+              ) {
+
+                estadoOperativo =
+                  'ocupado_identificado'
+
+              } else {
+
+                estadoOperativo =
+                  'ocupado_sin_identificar'
+
+              }
+
+            }
+
+
+            /*
+             * COMPATIBILIDAD VISUAL:
+             *
+             * Los componentes actuales entienden:
+             *
+             * libre
+             * ocupado
+             *
+             * Por eso una reserva se representa
+             * visualmente como ocupado (ROJO),
+             * pero conservamos estado_sensor para
+             * conocer la lectura física verdadera.
+             */
+
+            let estadoVisual =
+              estadoSensor
+
+
+            if (
+              reservado ||
+              asignado ||
+              ocupadoFisicamente
+            ) {
+
+              estadoVisual =
+                'ocupado'
+
+            }
+
+
             return {
 
               ...espacio,
 
 
-              /* ================================================
-                 PUESTO
-                 ================================================ */
+              /* SENSOR ORIGINAL */
+
+              estado_sensor:
+                estadoSensor,
+
+
+              /* ESTADO VISUAL */
+
+              estado:
+                estadoVisual,
+
+
+              estado_operativo:
+                estadoOperativo,
+
+
+              ocupado_fisicamente:
+                ocupadoFisicamente,
+
+
+              reservado,
+
+
+              disponible,
+
+
+              /* PUESTO */
 
               puesto_id:
                 puesto?.id ||
@@ -846,34 +1170,20 @@ export function ParkingProvider({
                 false,
 
 
-              /* ================================================
-                 OCUPACIÓN
-                 ================================================ */
+              /* RELACIONES */
 
-              ocupacion:
-                puesto
-                  ?.ocupacion
-                ||
-                null,
+              ocupacion,
 
 
-              /* ================================================
-                 VEHÍCULO
-                 ================================================ */
+              reserva,
 
-              vehiculo:
-                puesto
-                  ?.ocupacion
-                  ?.vehiculo
-                ||
-                null,
+
+              vehiculo,
 
 
               identificado:
                 Boolean(
-                  puesto
-                    ?.ocupacion
-                    ?.vehiculo,
+                  vehiculo,
                 ),
 
             }
@@ -901,21 +1211,25 @@ export function ParkingProvider({
           espacios.length
 
 
-        let libres =
+        let disponibles =
           0
 
-        let ocupados =
+
+        let reservados =
           0
+
+
+        let ocupadosFisicos =
+          0
+
 
         let identificados =
           0
 
 
-        /*
-         * Una única pasada.
-         *
-         * Antes había varios .filter() independientes.
-         */
+        let sinIdentificar =
+          0
+
 
         for (
           const espacio
@@ -923,30 +1237,47 @@ export function ParkingProvider({
         ) {
 
           if (
-            espacio.estado ===
-            'libre'
+            espacio.disponible
           ) {
-            libres +=
+            disponibles +=
               1
-
-            continue
           }
 
 
           if (
-            espacio.estado ===
-            'ocupado'
+            espacio.reservado
+
+            &&
+
+            !espacio
+              .ocupado_fisicamente
+          ) {
+            reservados +=
+              1
+          }
+
+
+          if (
+            espacio
+              .ocupado_fisicamente
           ) {
 
-            ocupados +=
+            ocupadosFisicos +=
               1
 
 
             if (
-              espacio.identificado
+              espacio.vehiculo
             ) {
+
               identificados +=
                 1
+
+            } else {
+
+              sinIdentificar +=
+                1
+
             }
 
           }
@@ -954,9 +1285,13 @@ export function ParkingProvider({
         }
 
 
-        const sinIdentificar =
-          ocupados -
-          identificados
+        const noDisponibles =
+          Math.max(
+            0,
+
+            total -
+            disponibles,
+          )
 
 
         const porcentajeDisponible =
@@ -964,7 +1299,7 @@ export function ParkingProvider({
           0
 
             ? (
-                libres /
+                disponibles /
                 total
               ) * 100
 
@@ -975,9 +1310,25 @@ export function ParkingProvider({
 
           total,
 
-          libres,
 
-          ocupados,
+          /* NUEVOS */
+
+          disponibles,
+
+          reservados,
+
+          ocupadosFisicos,
+
+          noDisponibles,
+
+
+          /* COMPATIBILIDAD */
+
+          libres:
+            disponibles,
+
+          ocupados:
+            noDisponibles,
 
           identificados,
 
@@ -1005,10 +1356,6 @@ export function ParkingProvider({
     ||
     cargandoSupabase
 
-
-  /* ==============================================================
-     VALOR
-     ============================================================== */
 
   const valor =
     useMemo(
@@ -1064,10 +1411,6 @@ export function ParkingProvider({
 }
 
 
-/* ================================================================
-   HOOK INTERNO
-   ================================================================ */
-
 export function useParkingContext() {
   const contexto =
     useContext(
@@ -1078,9 +1421,11 @@ export function useParkingContext() {
   if (
     !contexto
   ) {
+
     throw new Error(
-      'useParkingContext debe usarse dentro de <ParkingProvider>.',
+      'useParkingContext debe utilizarse dentro de ParkingProvider.',
     )
+
   }
 
 
