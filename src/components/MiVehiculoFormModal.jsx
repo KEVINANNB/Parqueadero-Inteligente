@@ -20,6 +20,9 @@ import {
   CSpinner,
 } from '@coreui/react'
 
+import ImageUploadField
+  from './ImageUploadField'
+
 
 const VACIO = {
 
@@ -50,10 +53,6 @@ const VACIO = {
 
 const PLACA_REGEX =
   /^[A-Z]{3}-\d{4}$/
-
-
-const URL_REGEX =
-  /^https?:\/\/\S+$/i
 
 
 export default function MiVehiculoFormModal({
@@ -196,12 +195,10 @@ export default function MiVehiculoFormModal({
 
 
       if (
-        !URL_REGEX.test(
-          form.foto_url,
-        )
+        !form.foto_url
       ) {
         nuevos.foto_url =
-          'Ingresa una URL válida.'
+          'Selecciona una fotografía del vehículo.'
       }
 
 
@@ -265,8 +262,7 @@ export default function MiVehiculoFormModal({
             form.tipo,
 
           foto_url:
-            form.foto_url
-              .trim(),
+            form.foto_url,
 
         })
 
@@ -439,7 +435,7 @@ export default function MiVehiculoFormModal({
           </CRow>
 
 
-          {/* MARCA / MODELO */}
+          {/* MARCA + MODELO */}
 
           <CRow className="mb-3">
 
@@ -521,7 +517,7 @@ export default function MiVehiculoFormModal({
           </CRow>
 
 
-          {/* COLOR / TIPO */}
+          {/* COLOR + TIPO */}
 
           <CRow className="mb-3">
 
@@ -587,7 +583,6 @@ export default function MiVehiculoFormModal({
                       .value,
                   )
                 }
-
               >
 
                 <option value="AUTOMOVIL">
@@ -617,42 +612,39 @@ export default function MiVehiculoFormModal({
 
           <div className="mb-3">
 
-            <CFormLabel>
-              Fotografía del vehículo
-            </CFormLabel>
+            <ImageUploadField
 
-
-            <CFormInput
-
-              type="url"
-
-              placeholder="https://..."
+              label="Fotografía del vehículo"
 
               value={
                 form.foto_url
               }
 
-              invalid={
-                !!errores.foto_url
-              }
-
-              feedbackInvalid={
-                errores.foto_url
-              }
+              carpeta="vehiculos"
 
               onChange={(
-                evento,
+                url,
               ) =>
                 actualizar(
                   'foto_url',
-
-                  evento
-                    .target
-                    .value,
+                  url,
                 )
               }
 
             />
+
+
+            {errores.foto_url && (
+
+              <div
+                className="text-danger small mt-1"
+              >
+                {
+                  errores.foto_url
+                }
+              </div>
+
+            )}
 
           </div>
 
@@ -677,9 +669,7 @@ export default function MiVehiculoFormModal({
             onClose
           }
         >
-
           Cancelar
-
         </CButton>
 
 

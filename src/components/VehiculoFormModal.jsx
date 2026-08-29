@@ -21,6 +21,14 @@ import {
   CSpinner,
 } from '@coreui/react'
 
+import ImageUploadField
+  from './ImageUploadField'
+
+
+/* ================================================================
+   FORMULARIO VACÍO
+   ================================================================ */
+
 const VACIO = {
   placa: '',
 
@@ -29,11 +37,13 @@ const VACIO = {
   modelo: '',
 
   anio:
-    new Date().getFullYear(),
+    new Date()
+      .getFullYear(),
 
   color: '',
 
-  tipo: 'AUTOMOVIL',
+  tipo:
+    'AUTOMOVIL',
 
   foto_url: '',
 
@@ -52,17 +62,26 @@ const VACIO = {
   autorizado: true,
 }
 
+
+/* ================================================================
+   VALIDACIONES
+   ================================================================ */
+
 const PLACA_REGEX =
   /^[A-Z]{3}-\d{4}$/
+
 
 const CEDULA_REGEX =
   /^\d{10}$/
 
+
 const CORREO_REGEX =
   /^\S+@\S+\.\S+$/
 
-const URL_REGEX =
-  /^https?:\/\/\S+$/i
+
+/* ================================================================
+   COMPONENTE
+   ================================================================ */
 
 export default function VehiculoFormModal({
   visible,
@@ -74,447 +93,820 @@ export default function VehiculoFormModal({
   const [
     form,
     setForm,
-  ] = useState(VACIO)
+  ] =
+    useState(VACIO)
+
 
   const [
     errores,
     setErrores,
-  ] = useState({})
+  ] =
+    useState({})
+
 
   const [
     guardando,
     setGuardando,
-  ] = useState(false)
+  ] =
+    useState(false)
+
 
   const [
     errorGeneral,
     setErrorGeneral,
-  ] = useState('')
+  ] =
+    useState('')
+
+
+  /* ==============================================================
+     MODOS
+     ============================================================== */
 
   const esCrear =
-    modo === 'crear'
+    modo ===
+    'crear'
+
 
   const esEditarAdmin =
-    modo === 'editar-admin'
+    modo ===
+    'editar-admin'
+
 
   const esEditarPropio =
-    modo === 'editar-propio'
+    modo ===
+    'editar-propio'
+
 
   const esModoAdmin =
     esCrear ||
     esEditarAdmin
 
-  useEffect(() => {
-    if (!visible) {
-      return
-    }
 
-    if (vehiculoInicial) {
-      const datos = {
-        ...VACIO,
-        ...vehiculoInicial,
-      }
+  /* ==============================================================
+     CARGAR DATOS
+     ============================================================== */
 
-      /*
-       * La consulta pública no expone la
-       * cédula completa.
-       *
-       * En edición admin dejamos este campo
-       * vacío. Si queda vacío, se conserva
-       * la cédula anterior.
-       */
-      if (esEditarAdmin) {
-        datos.cedula_propietario =
-          ''
-      }
-
-      setForm(datos)
-    } else {
-      setForm({
-        ...VACIO,
-        anio:
-          new Date().getFullYear(),
-      })
-    }
-
-    setErrores({})
-    setErrorGeneral('')
-  }, [
-    visible,
-    vehiculoInicial,
-    esEditarAdmin,
-  ])
-
-  const actualizarCampo = (
-    campo,
-    valor,
-  ) => {
-    setForm((actual) => ({
-      ...actual,
-      [campo]: valor,
-    }))
-  }
-
-  const validar = () => {
-    const nuevosErrores = {}
-
-    if (esModoAdmin) {
-      if (
-        !PLACA_REGEX.test(
-          form.placa || '',
-        )
-      ) {
-        nuevosErrores.placa =
-          'Formato esperado: ABC-1234'
-      }
-
-      /*
-       * En crear es obligatoria.
-       * En editar admin es opcional:
-       * vacío = conservar actual.
-       */
-      if (esCrear) {
-        if (
-          !CEDULA_REGEX.test(
-            form.cedula_propietario ||
-              '',
-          )
-        ) {
-          nuevosErrores.cedula_propietario =
-            'Debe contener exactamente 10 dígitos'
-        }
-      } else if (
-        form.cedula_propietario &&
-        !CEDULA_REGEX.test(
-          form.cedula_propietario,
-        )
-      ) {
-        nuevosErrores.cedula_propietario =
-          'Debe contener exactamente 10 dígitos'
-      }
+  useEffect(
+    () => {
 
       if (
-        !form.propietario_nombre?.trim()
+        !visible
       ) {
-        nuevosErrores.propietario_nombre =
-          'Campo requerido'
-      }
-
-      if (
-        !CORREO_REGEX.test(
-          form.correo_institucional ||
-            '',
-        )
-      ) {
-        nuevosErrores.correo_institucional =
-          'Correo inválido'
-      }
-
-      const anio =
-        Number(form.anio)
-
-      if (
-        !anio ||
-        anio < 1990 ||
-        anio > 2035
-      ) {
-        nuevosErrores.anio =
-          'El año debe estar entre 1990 y 2035'
-      }
-    }
-
-    if (!form.marca?.trim()) {
-      nuevosErrores.marca =
-        'Campo requerido'
-    }
-
-    if (!form.modelo?.trim()) {
-      nuevosErrores.modelo =
-        'Campo requerido'
-    }
-
-    if (!form.color?.trim()) {
-      nuevosErrores.color =
-        'Campo requerido'
-    }
-
-    if (
-      !URL_REGEX.test(
-        form.foto_url || '',
-      )
-    ) {
-      nuevosErrores.foto_url =
-        'Introduce una URL válida que empiece con http:// o https://'
-    }
-
-    if (
-      !URL_REGEX.test(
-        form.foto_propietario_url ||
-          '',
-      )
-    ) {
-      nuevosErrores.foto_propietario_url =
-        'Introduce una URL válida que empiece con http:// o https://'
-    }
-
-    setErrores(
-      nuevosErrores,
-    )
-
-    return (
-      Object.keys(
-        nuevosErrores,
-      ).length === 0
-    )
-  }
-
-  const manejarGuardar =
-    async () => {
-      setErrorGeneral('')
-
-      if (!validar()) {
         return
       }
 
+
+      if (
+        vehiculoInicial
+      ) {
+        const datos = {
+          ...VACIO,
+          ...vehiculoInicial,
+        }
+
+
+        /*
+         * La consulta pública solamente
+         * entrega la cédula enmascarada.
+         *
+         * En edición de administrador
+         * dejamos la cédula completa vacía.
+         *
+         * Vacío = conservar cédula actual.
+         */
+
+        if (
+          esEditarAdmin
+        ) {
+          datos.cedula_propietario =
+            ''
+        }
+
+
+        setForm(
+          datos,
+        )
+
+      } else {
+
+        setForm({
+          ...VACIO,
+
+          anio:
+            new Date()
+              .getFullYear(),
+        })
+
+      }
+
+
+      setErrores({})
+
+      setErrorGeneral('')
+
+      setGuardando(false)
+
+    },
+    [
+      visible,
+      vehiculoInicial,
+      esEditarAdmin,
+    ],
+  )
+
+
+  /* ==============================================================
+     CAMBIAR CAMPO
+     ============================================================== */
+
+  const actualizarCampo =
+    (
+      campo,
+      valor,
+    ) => {
+
+      setForm(
+        (
+          actual,
+        ) => ({
+          ...actual,
+
+          [campo]:
+            valor,
+        }),
+      )
+
+
+      /*
+       * Quitamos el error del campo
+       * cuando el usuario empieza
+       * a corregirlo.
+       */
+
+      setErrores(
+        (
+          actuales,
+        ) => ({
+          ...actuales,
+
+          [campo]:
+            '',
+        }),
+      )
+
+    }
+
+
+  /* ==============================================================
+     VALIDAR
+     ============================================================== */
+
+  const validar =
+    () => {
+
+      const nuevosErrores = {}
+
+
+      /* ==========================================================
+         SOLO ADMIN
+         ========================================================== */
+
+      if (
+        esModoAdmin
+      ) {
+
+        /* PLACA */
+
+        if (
+          !PLACA_REGEX.test(
+            form.placa ||
+            '',
+          )
+        ) {
+          nuevosErrores.placa =
+            'Formato esperado: ABC-1234'
+        }
+
+
+        /*
+         * CÉDULA
+         *
+         * Crear:
+         * obligatoria.
+         *
+         * Editar administrador:
+         * opcional.
+         */
+
+        if (
+          esCrear
+        ) {
+
+          if (
+            !CEDULA_REGEX.test(
+              form.cedula_propietario ||
+              '',
+            )
+          ) {
+            nuevosErrores.cedula_propietario =
+              'Debe contener exactamente 10 dígitos'
+          }
+
+        } else if (
+          form.cedula_propietario &&
+          !CEDULA_REGEX.test(
+            form.cedula_propietario,
+          )
+        ) {
+
+          nuevosErrores.cedula_propietario =
+            'Debe contener exactamente 10 dígitos'
+
+        }
+
+
+        /* PROPIETARIO */
+
+        if (
+          !form
+            .propietario_nombre
+            ?.trim()
+        ) {
+          nuevosErrores.propietario_nombre =
+            'Campo requerido'
+        }
+
+
+        /* CORREO */
+
+        if (
+          !CORREO_REGEX.test(
+            form.correo_institucional ||
+            '',
+          )
+        ) {
+          nuevosErrores.correo_institucional =
+            'Correo inválido'
+        }
+
+
+        /* AÑO */
+
+        const anio =
+          Number(
+            form.anio,
+          )
+
+
+        if (
+          !anio ||
+          anio < 1990 ||
+          anio > 2035
+        ) {
+          nuevosErrores.anio =
+            'El año debe estar entre 1990 y 2035'
+        }
+
+      }
+
+
+      /* ==========================================================
+         DATOS DEL VEHÍCULO
+         ========================================================== */
+
+      if (
+        !form.marca
+          ?.trim()
+      ) {
+        nuevosErrores.marca =
+          'Campo requerido'
+      }
+
+
+      if (
+        !form.modelo
+          ?.trim()
+      ) {
+        nuevosErrores.modelo =
+          'Campo requerido'
+      }
+
+
+      if (
+        !form.color
+          ?.trim()
+      ) {
+        nuevosErrores.color =
+          'Campo requerido'
+      }
+
+
+      /* ==========================================================
+         FOTO VEHÍCULO
+         ========================================================== */
+
+      if (
+        !form.foto_url
+      ) {
+        nuevosErrores.foto_url =
+          'Selecciona una fotografía del vehículo.'
+      }
+
+
+      /* ==========================================================
+         FOTO PROPIETARIO
+         
+         En modo administrador queremos que
+         el registro tenga fotografía.
+         
+         En edición propia puede modificarse,
+         pero no obligamos a cambiarla.
+         ========================================================== */
+
+      if (
+        esModoAdmin &&
+        !form.foto_propietario_url
+      ) {
+        nuevosErrores.foto_propietario_url =
+          'Selecciona una fotografía del propietario.'
+      }
+
+
+      setErrores(
+        nuevosErrores,
+      )
+
+
+      return (
+        Object.keys(
+          nuevosErrores,
+        ).length ===
+        0
+      )
+
+    }
+
+
+  /* ==============================================================
+     GUARDAR
+     ============================================================== */
+
+  const manejarGuardar =
+    async () => {
+
+      setErrorGeneral('')
+
+
+      if (
+        !validar()
+      ) {
+        return
+      }
+
+
       setGuardando(true)
+
 
       let payload
 
-      if (esEditarPropio) {
-        /*
-         * CAMPOS PERMITIDOS PARA
-         * USUARIO NORMAL.
-         */
+
+      /* ==========================================================
+         USUARIO NORMAL
+         ========================================================== */
+
+      if (
+        esEditarPropio
+      ) {
+
         payload = {
+
           marca:
-            form.marca.trim(),
+            form.marca
+              .trim(),
+
 
           modelo:
-            form.modelo.trim(),
+            form.modelo
+              .trim(),
+
 
           color:
-            form.color.trim(),
+            form.color
+              .trim(),
+
 
           tipo:
             form.tipo,
 
+
           foto_url:
-            form.foto_url.trim(),
+            form.foto_url
+              .trim(),
+
+
+          /*
+           * Este campo permitirá que
+           * useMiCuenta actualice también
+           * la fotografía de perfil.
+           */
 
           foto_propietario_url:
-            form.foto_propietario_url.trim(),
+            (
+              form.foto_propietario_url ||
+              ''
+            )
+              .trim(),
+
         }
+
       } else {
-        /*
-         * CAMPOS ADMINISTRATIVOS.
-         */
+
+        /* ========================================================
+           ADMINISTRADOR
+           ======================================================== */
+
         payload = {
+
           placa:
             form.placa
               .trim()
               .toUpperCase(),
 
+
           marca:
-            form.marca.trim(),
+            form.marca
+              .trim(),
+
 
           modelo:
-            form.modelo.trim(),
+            form.modelo
+              .trim(),
+
 
           anio:
-            Number(form.anio),
+            Number(
+              form.anio,
+            ),
+
 
           color:
-            form.color.trim(),
+            form.color
+              .trim(),
+
 
           tipo:
             form.tipo,
 
+
           foto_url:
-            form.foto_url.trim(),
+            form.foto_url
+              .trim(),
+
 
           foto_fuente_url:
             (
               form.foto_fuente_url ||
               form.foto_url
-            ).trim(),
+            )
+              .trim(),
+
 
           foto_propietario_url:
-            form.foto_propietario_url.trim(),
+            (
+              form.foto_propietario_url ||
+              ''
+            )
+              .trim(),
+
 
           propietario_nombre:
-            form.propietario_nombre
+            form
+              .propietario_nombre
               .trim()
               .toUpperCase(),
 
+
           correo_institucional:
-            form.correo_institucional
+            form
+              .correo_institucional
               .trim()
               .toLowerCase(),
+
 
           autorizado:
             Boolean(
               form.autorizado,
             ),
+
         }
+
+
+        /*
+         * Si estamos creando, se envía
+         * obligatoriamente.
+         *
+         * En edición:
+         *
+         * vacío = conservar anterior.
+         */
 
         if (
           esCrear ||
-          form.cedula_propietario
+          form
+            .cedula_propietario
             ?.trim()
         ) {
+
           payload.cedula_propietario =
-            form.cedula_propietario.trim()
+            form
+              .cedula_propietario
+              .trim()
+
         }
+
       }
 
-      const resultado =
-        await onGuardar(payload)
 
-      setGuardando(false)
+      /* ==========================================================
+         ENVIAR
+         ========================================================== */
 
-      if (!resultado.ok) {
-        setErrorGeneral(
-          resultado.error ||
+      try {
+
+        const resultado =
+          await onGuardar(
+            payload,
+          )
+
+
+        setGuardando(false)
+
+
+        if (
+          !resultado?.ok
+        ) {
+
+          setErrorGeneral(
+            resultado?.error ||
             'No se pudo guardar el registro.',
+          )
+
+          return
+
+        }
+
+
+        onClose()
+
+      } catch (
+        error
+      ) {
+
+        console.error(
+          'Error guardando vehículo:',
+          error,
         )
 
-        return
+
+        setGuardando(false)
+
+
+        setErrorGeneral(
+          error?.message ||
+          'Ocurrió un error inesperado.',
+        )
+
       }
 
-      onClose()
     }
+
+
+  /* ==============================================================
+     RENDER
+     ============================================================== */
 
   return (
     <CModal
-      visible={visible}
 
-      onClose={onClose}
+      visible={
+        visible
+      }
+
+      onClose={
+        onClose
+      }
 
       backdrop="static"
 
       alignment="center"
 
       size="lg"
+
     >
+
+      {/* ========================================================
+          HEADER
+          ======================================================== */}
+
       <CModalHeader>
+
         <CModalTitle>
+
           {esCrear
             ? 'Agregar vehículo'
             : esEditarAdmin
               ? 'Editar vehículo - Administrador'
               : 'Editar mi vehículo'}
+
         </CModalTitle>
+
       </CModalHeader>
 
+
+      {/* ========================================================
+          BODY
+          ======================================================== */}
+
       <CModalBody>
+
+        {/* ERROR */}
+
         {errorGeneral && (
+
           <CAlert color="danger">
-            {errorGeneral}
+
+            {
+              errorGeneral
+            }
+
           </CAlert>
+
         )}
+
+
+        {/* INFORMACIÓN USUARIO NORMAL */}
 
         {esEditarPropio && (
+
           <CAlert color="info">
+
             Puedes modificar únicamente
             los datos permitidos de tu
-            vehículo. La placa, cédula,
-            año, correo y autorización
-            están protegidos.
+            vehículo.
+
+            {' '}
+
+            La placa, cédula, año,
+            correo y autorización están
+            protegidos.
+
           </CAlert>
+
         )}
 
+
         <CForm>
+
+          {/* ==================================================
+              PLACA + CÉDULA
+              ================================================== */}
+
           {esModoAdmin && (
-            <>
-              <CRow className="mb-3">
-                <CCol md={6}>
-                  <CFormLabel>
-                    Placa
-                  </CFormLabel>
 
-                  <CFormInput
-                    placeholder="ABC-1234"
+            <CRow className="mb-3">
 
-                    value={
-                      form.placa
-                    }
+              {/* PLACA */}
 
-                    invalid={
-                      !!errores.placa
-                    }
+              <CCol md={6}>
 
-                    feedbackInvalid={
-                      errores.placa
-                    }
+                <CFormLabel>
+                  Placa
+                </CFormLabel>
 
-                    onChange={(
-                      evento,
-                    ) =>
-                      actualizarCampo(
-                        'placa',
 
-                        evento.target.value
-                          .toUpperCase(),
-                      )
-                    }
-                  />
-                </CCol>
+                <CFormInput
 
-                <CCol md={6}>
-                  <CFormLabel>
-                    Cédula del propietario
-                  </CFormLabel>
+                  placeholder="ABC-1234"
 
-                  <CFormInput
-                    placeholder={
-                      esEditarAdmin
-                        ? `Actual: ${
-                            form.cedula_enmascarada ||
-                            'protegida'
-                          } — deja vacío para conservar`
-                        : '10 dígitos'
-                    }
+                  value={
+                    form.placa
+                  }
 
-                    value={
-                      form.cedula_propietario
-                    }
+                  invalid={
+                    !!errores.placa
+                  }
 
-                    invalid={
-                      !!errores.cedula_propietario
-                    }
+                  feedbackInvalid={
+                    errores.placa
+                  }
 
-                    feedbackInvalid={
-                      errores.cedula_propietario
-                    }
+                  onChange={(
+                    evento,
+                  ) =>
+                    actualizarCampo(
 
-                    onChange={(
-                      evento,
-                    ) =>
-                      actualizarCampo(
-                        'cedula_propietario',
+                      'placa',
 
-                        evento.target.value.replace(
+                      evento
+                        .target
+                        .value
+                        .toUpperCase(),
+
+                    )
+                  }
+
+                />
+
+              </CCol>
+
+
+              {/* CÉDULA */}
+
+              <CCol md={6}>
+
+                <CFormLabel>
+                  Cédula del propietario
+                </CFormLabel>
+
+
+                <CFormInput
+
+                  placeholder={
+                    esEditarAdmin
+
+                      ? `Actual: ${
+                          form
+                            .cedula_enmascarada ||
+                          'protegida'
+                        } — deja vacío para conservar`
+
+                      : '10 dígitos'
+                  }
+
+                  value={
+                    form
+                      .cedula_propietario
+                  }
+
+                  invalid={
+                    !!errores
+                      .cedula_propietario
+                  }
+
+                  feedbackInvalid={
+                    errores
+                      .cedula_propietario
+                  }
+
+                  onChange={(
+                    evento,
+                  ) =>
+                    actualizarCampo(
+
+                      'cedula_propietario',
+
+                      evento
+                        .target
+                        .value
+                        .replace(
                           /\D/g,
                           '',
                         ),
-                      )
-                    }
 
-                    maxLength={10}
-                  />
-                </CCol>
-              </CRow>
-            </>
+                    )
+                  }
+
+                  maxLength={10}
+
+                />
+
+              </CCol>
+
+            </CRow>
+
           )}
 
+
+          {/* ==================================================
+              MARCA + MODELO + TIPO
+              ================================================== */}
+
           <CRow className="mb-3">
+
+            {/* MARCA */}
+
             <CCol md={4}>
+
               <CFormLabel>
                 Marca
               </CFormLabel>
 
+
               <CFormInput
-                value={form.marca}
+
+                value={
+                  form.marca
+                }
 
                 invalid={
                   !!errores.marca
@@ -528,21 +920,35 @@ export default function VehiculoFormModal({
                   evento,
                 ) =>
                   actualizarCampo(
+
                     'marca',
 
-                    evento.target.value,
+                    evento
+                      .target
+                      .value,
+
                   )
                 }
+
               />
+
             </CCol>
 
+
+            {/* MODELO */}
+
             <CCol md={4}>
+
               <CFormLabel>
                 Modelo
               </CFormLabel>
 
+
               <CFormInput
-                value={form.modelo}
+
+                value={
+                  form.modelo
+                }
 
                 invalid={
                   !!errores.modelo
@@ -556,32 +962,52 @@ export default function VehiculoFormModal({
                   evento,
                 ) =>
                   actualizarCampo(
+
                     'modelo',
 
-                    evento.target.value,
+                    evento
+                      .target
+                      .value,
+
                   )
                 }
+
               />
+
             </CCol>
 
+
+            {/* TIPO */}
+
             <CCol md={4}>
+
               <CFormLabel>
                 Tipo
               </CFormLabel>
 
+
               <CFormSelect
-                value={form.tipo}
+
+                value={
+                  form.tipo
+                }
 
                 onChange={(
                   evento,
                 ) =>
                   actualizarCampo(
+
                     'tipo',
 
-                    evento.target.value,
+                    evento
+                      .target
+                      .value,
+
                   )
                 }
+
               >
+
                 <option value="AUTOMOVIL">
                   Automóvil
                 </option>
@@ -597,25 +1023,42 @@ export default function VehiculoFormModal({
                 <option value="MOTOCICLETA">
                   Motocicleta
                 </option>
+
               </CFormSelect>
+
             </CCol>
+
           </CRow>
 
+
+          {/* ==================================================
+              AÑO + COLOR
+              ================================================== */}
+
           <CRow className="mb-3">
+
+            {/* AÑO SOLO ADMIN */}
+
             {esModoAdmin && (
+
               <CCol md={4}>
+
                 <CFormLabel>
                   Año
                 </CFormLabel>
 
+
                 <CFormInput
+
                   type="number"
 
                   min="1990"
 
                   max="2035"
 
-                  value={form.anio}
+                  value={
+                    form.anio
+                  }
 
                   invalid={
                     !!errores.anio
@@ -629,14 +1072,24 @@ export default function VehiculoFormModal({
                     evento,
                   ) =>
                     actualizarCampo(
+
                       'anio',
 
-                      evento.target.value,
+                      evento
+                        .target
+                        .value,
+
                     )
                   }
+
                 />
+
               </CCol>
+
             )}
+
+
+            {/* COLOR */}
 
             <CCol
               md={
@@ -645,12 +1098,17 @@ export default function VehiculoFormModal({
                   : 12
               }
             >
+
               <CFormLabel>
                 Color
               </CFormLabel>
 
+
               <CFormInput
-                value={form.color}
+
+                value={
+                  form.color
+                }
 
                 invalid={
                   !!errores.color
@@ -664,153 +1122,239 @@ export default function VehiculoFormModal({
                   evento,
                 ) =>
                   actualizarCampo(
+
                     'color',
 
-                    evento.target.value,
+                    evento
+                      .target
+                      .value,
+
                   )
                 }
+
               />
+
             </CCol>
+
           </CRow>
 
-          <CRow className="mb-3">
-            <CCol md={6}>
-              <CFormLabel>
-                Foto del vehículo
-              </CFormLabel>
 
-              <CFormInput
-                type="url"
+          {/* ==================================================
+              FOTOGRAFÍA VEHÍCULO
+              ================================================== */}
 
-                placeholder="https://..."
+          <div className="mb-3">
 
-                value={
-                  form.foto_url
-                }
+            <ImageUploadField
 
-                invalid={
-                  !!errores.foto_url
-                }
+              label="Fotografía del vehículo"
 
-                feedbackInvalid={
+              value={
+                form.foto_url
+              }
+
+              carpeta="vehiculos"
+
+              disabled={
+                guardando
+              }
+
+              onChange={(
+                url,
+              ) =>
+                actualizarCampo(
+                  'foto_url',
+                  url,
+                )
+              }
+
+            />
+
+
+            {errores.foto_url && (
+
+              <div className="text-danger small mt-1">
+
+                {
                   errores.foto_url
                 }
 
-                onChange={(
-                  evento,
-                ) =>
-                  actualizarCampo(
-                    'foto_url',
+              </div>
 
-                    evento.target.value,
-                  )
+            )}
+
+          </div>
+
+
+          {/* ==================================================
+              FOTOGRAFÍA PROPIETARIO
+              ================================================== */}
+
+          <div className="mb-3">
+
+            <ImageUploadField
+
+              label={
+                esEditarPropio
+                  ? 'Fotografía del propietario / perfil'
+                  : 'Fotografía del propietario'
+              }
+
+              value={
+                form
+                  .foto_propietario_url
+              }
+
+              carpeta="perfiles"
+
+              disabled={
+                guardando
+              }
+
+              onChange={(
+                url,
+              ) =>
+                actualizarCampo(
+
+                  'foto_propietario_url',
+
+                  url,
+
+                )
+              }
+
+            />
+
+
+            {errores
+              .foto_propietario_url && (
+
+              <div className="text-danger small mt-1">
+
+                {
+                  errores
+                    .foto_propietario_url
                 }
-              />
-            </CCol>
 
-            <CCol md={6}>
-              <CFormLabel>
-                Foto del propietario
-              </CFormLabel>
+              </div>
 
-              <CFormInput
-                type="url"
+            )}
 
-                placeholder="https://..."
+          </div>
 
-                value={
-                  form.foto_propietario_url
-                }
 
-                invalid={
-                  !!errores.foto_propietario_url
-                }
-
-                feedbackInvalid={
-                  errores.foto_propietario_url
-                }
-
-                onChange={(
-                  evento,
-                ) =>
-                  actualizarCampo(
-                    'foto_propietario_url',
-
-                    evento.target.value,
-                  )
-                }
-              />
-            </CCol>
-          </CRow>
+          {/* ==================================================
+              DATOS ADMINISTRATIVOS
+              ================================================== */}
 
           {esModoAdmin && (
+
             <>
+
               <CRow className="mb-3">
+
+                {/* NOMBRE PROPIETARIO */}
+
                 <CCol md={6}>
+
                   <CFormLabel>
                     Nombre del propietario
                   </CFormLabel>
 
+
                   <CFormInput
+
                     value={
-                      form.propietario_nombre
+                      form
+                        .propietario_nombre
                     }
 
                     invalid={
-                      !!errores.propietario_nombre
+                      !!errores
+                        .propietario_nombre
                     }
 
                     feedbackInvalid={
-                      errores.propietario_nombre
+                      errores
+                        .propietario_nombre
                     }
 
                     onChange={(
                       evento,
                     ) =>
                       actualizarCampo(
+
                         'propietario_nombre',
 
-                        evento.target.value,
+                        evento
+                          .target
+                          .value,
+
                       )
                     }
+
                   />
+
                 </CCol>
 
+
+                {/* CORREO */}
+
                 <CCol md={6}>
+
                   <CFormLabel>
                     Correo institucional
                   </CFormLabel>
 
+
                   <CFormInput
+
                     type="email"
 
                     value={
-                      form.correo_institucional
+                      form
+                        .correo_institucional
                     }
 
                     invalid={
-                      !!errores.correo_institucional
+                      !!errores
+                        .correo_institucional
                     }
 
                     feedbackInvalid={
-                      errores.correo_institucional
+                      errores
+                        .correo_institucional
                     }
 
                     onChange={(
                       evento,
                     ) =>
                       actualizarCampo(
+
                         'correo_institucional',
 
-                        evento.target.value,
+                        evento
+                          .target
+                          .value,
+
                       )
                     }
+
                   />
+
                 </CCol>
+
               </CRow>
 
-              <div className="border rounded p-3 bg-body-tertiary">
+
+              {/* AUTORIZACIÓN */}
+
+              <div
+                className="border rounded p-3 bg-body-tertiary"
+              >
+
                 <CFormCheck
+
                   id="vehiculo-autorizado"
 
                   label="Vehículo autorizado para ingresar al parqueadero"
@@ -825,54 +1369,93 @@ export default function VehiculoFormModal({
                     evento,
                   ) =>
                     actualizarCampo(
+
                       'autorizado',
 
-                      evento.target.checked,
+                      evento
+                        .target
+                        .checked,
+
                     )
                   }
+
                 />
+
               </div>
+
             </>
+
           )}
+
         </CForm>
+
       </CModalBody>
 
+
+      {/* ========================================================
+          FOOTER
+          ======================================================== */}
+
       <CModalFooter>
+
         <CButton
+
           color="secondary"
 
           variant="outline"
 
-          onClick={onClose}
+          onClick={
+            onClose
+          }
 
-          disabled={guardando}
+          disabled={
+            guardando
+          }
         >
+
           Cancelar
+
         </CButton>
 
+
         <CButton
+
           color="success"
 
           onClick={
             manejarGuardar
           }
 
-          disabled={guardando}
+          disabled={
+            guardando
+          }
         >
+
           {guardando ? (
+
             <>
+
               <CSpinner
                 size="sm"
                 className="me-2"
               />
 
               Guardando...
+
             </>
+
           ) : (
-            'Guardar cambios'
+
+            esCrear
+              ? 'Agregar vehículo'
+              : 'Guardar cambios'
+
           )}
+
         </CButton>
+
       </CModalFooter>
+
     </CModal>
   )
 }

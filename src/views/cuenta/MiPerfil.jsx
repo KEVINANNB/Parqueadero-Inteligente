@@ -21,6 +21,9 @@ import {
 import useMiCuenta
   from '../../hooks/useMiCuenta'
 
+import ImageUploadField
+  from '../../components/ImageUploadField'
+
 
 export default function MiPerfil() {
   const {
@@ -31,6 +34,10 @@ export default function MiPerfil() {
   } =
     useMiCuenta()
 
+
+  /* ==============================================================
+     FORMULARIO
+     ============================================================== */
 
   const [
     nombre,
@@ -67,6 +74,10 @@ export default function MiPerfil() {
     useState(null)
 
 
+  /* ==============================================================
+     CARGAR DATOS
+     ============================================================== */
+
   useEffect(
     () => {
 
@@ -94,6 +105,10 @@ export default function MiPerfil() {
   )
 
 
+  /* ==============================================================
+     GUARDAR
+     ============================================================== */
+
   const guardar =
     async (
       evento,
@@ -101,23 +116,37 @@ export default function MiPerfil() {
 
       evento.preventDefault()
 
+
       setMensaje(null)
 
+
+      /* ----------------------------------------------------------
+         NOMBRE
+         ---------------------------------------------------------- */
 
       if (
         !nombre.trim()
       ) {
+
         setMensaje({
+
           tipo:
             'danger',
 
           texto:
             'Ingresa tu nombre completo.',
+
         })
 
+
         return
+
       }
 
+
+      /* ----------------------------------------------------------
+         CÉDULA
+         ---------------------------------------------------------- */
 
       if (
         cedula &&
@@ -125,81 +154,113 @@ export default function MiPerfil() {
           cedula,
         )
       ) {
+
         setMensaje({
+
           tipo:
             'danger',
 
           texto:
             'La cédula debe contener exactamente 10 números.',
+
         })
 
+
         return
+
       }
 
 
-      if (
-        foto &&
-        !/^https?:\/\/\S+$/i.test(
-          foto,
-        )
-      ) {
-        setMensaje({
-          tipo:
-            'danger',
-
-          texto:
-            'La fotografía debe ser una URL válida.',
-        })
-
-        return
-      }
-
+      /* ----------------------------------------------------------
+         GUARDAR
+         ---------------------------------------------------------- */
 
       setGuardando(true)
 
 
-      const resultado =
-        await actualizarPerfil({
+      try {
 
-          nombre,
+        const resultado =
+          await actualizarPerfil({
 
-          cedula,
+            nombre,
 
-          foto_url:
-            foto,
+            cedula,
 
-        })
+            foto_url:
+              foto,
+
+          })
 
 
-      setGuardando(false)
+        setGuardando(false)
 
 
-      if (
-        resultado.ok
+        if (
+          resultado.ok
+        ) {
+
+          setMensaje({
+
+            tipo:
+              'success',
+
+            texto:
+              'Tus datos fueron actualizados correctamente.',
+
+          })
+
+        } else {
+
+          setMensaje({
+
+            tipo:
+              'danger',
+
+            texto:
+              resultado.error,
+
+          })
+
+        }
+
+      } catch (
+        errorGuardar
       ) {
-        setMensaje({
-          tipo:
-            'success',
 
-          texto:
-            'Tus datos fueron actualizados correctamente.',
-        })
-      } else {
+        console.error(
+          'Error guardando perfil:',
+          errorGuardar,
+        )
+
+
+        setGuardando(false)
+
+
         setMensaje({
+
           tipo:
             'danger',
 
           texto:
-            resultado.error,
+            errorGuardar?.message ||
+            'Ocurrió un error inesperado al guardar.',
+
         })
+
       }
 
     }
 
 
+  /* ==============================================================
+     CARGANDO
+     ============================================================== */
+
   if (
     cargando
   ) {
+
     return (
       <div className="text-center py-5">
 
@@ -207,31 +268,43 @@ export default function MiPerfil() {
           color="success"
         />
 
+
         <p className="mt-3">
+
           Cargando perfil...
+
         </p>
 
       </div>
     )
+
   }
 
+
+  /* ==============================================================
+     RENDER
+     ============================================================== */
 
   return (
     <>
 
-      {/* =====================================================
+      {/* ==========================================================
           ENCABEZADO
-          ===================================================== */}
+          ========================================================== */}
 
       <div className="mb-4">
 
         <small className="text-success fw-semibold">
+
           MI CUENTA
+
         </small>
 
 
         <h2 className="mt-1 mb-2">
+
           Mi perfil
+
         </h2>
 
 
@@ -245,18 +318,26 @@ export default function MiPerfil() {
       </div>
 
 
-      {/* =====================================================
-          ERRORES
-          ===================================================== */}
+      {/* ==========================================================
+          ERROR
+          ========================================================== */}
 
       {error && (
 
         <CAlert color="danger">
-          {error}
+
+          {
+            error
+          }
+
         </CAlert>
 
       )}
 
+
+      {/* ==========================================================
+          MENSAJE
+          ========================================================== */}
 
       {mensaje && (
 
@@ -265,13 +346,19 @@ export default function MiPerfil() {
             mensaje.tipo
           }
         >
+
           {
             mensaje.texto
           }
+
         </CAlert>
 
       )}
 
+
+      {/* ==========================================================
+          PERFIL INCOMPLETO
+          ========================================================== */}
 
       {!perfil.cedula && (
 
@@ -292,15 +379,15 @@ export default function MiPerfil() {
       )}
 
 
-      {/* =====================================================
+      {/* ==========================================================
           CONTENIDO
-          ===================================================== */}
+          ========================================================== */}
 
       <CRow className="g-4">
 
-        {/* ===================================================
-            TARJETA PERFIL
-            =================================================== */}
+        {/* ========================================================
+            INFORMACIÓN DEL USUARIO
+            ======================================================== */}
 
         <CCol lg={4}>
 
@@ -308,11 +395,14 @@ export default function MiPerfil() {
 
             <CCardBody className="text-center py-5">
 
-              {perfil.foto ? (
+              {/* FOTO */}
+
+              {foto ? (
 
                 <CAvatar
+
                   src={
-                    perfil.foto
+                    foto
                   }
 
                   style={{
@@ -321,7 +411,11 @@ export default function MiPerfil() {
 
                     height:
                       130,
+
+                    objectFit:
+                      'cover',
                   }}
+
                 />
 
               ) : (
@@ -342,9 +436,14 @@ export default function MiPerfil() {
                     fontSize:
                       36,
                   }}
+
                 >
 
                   {
+                    nombre
+                      ?.charAt(0)
+                      ?.toUpperCase()
+                    ||
                     perfil.nombre
                       ?.charAt(0)
                       ?.toUpperCase()
@@ -357,14 +456,19 @@ export default function MiPerfil() {
               )}
 
 
+              {/* NOMBRE */}
+
               <h4 className="mt-3 mb-1">
 
                 {
+                  nombre ||
                   perfil.nombre
                 }
 
               </h4>
 
+
+              {/* CORREO */}
 
               <p className="text-body-secondary mb-1">
 
@@ -375,26 +479,39 @@ export default function MiPerfil() {
               </p>
 
 
+              {/* CÉDULA */}
+
               <small className="text-body-secondary">
 
                 Cédula:{' '}
 
                 {
-                  perfil
-                    .cedulaEnmascarada
+                  cedula
+
+                    ? `******${
+                        cedula.slice(
+                          -4,
+                        )
+                      }`
+
+                    : 'No registrada'
                 }
 
               </small>
 
 
+              {/* ESTADO */}
+
               <div className="mt-3">
 
                 <span
+
                   className={
                     perfil.activo
                       ? 'badge bg-success'
                       : 'badge bg-danger'
                   }
+
                 >
 
                   {
@@ -414,18 +531,22 @@ export default function MiPerfil() {
         </CCol>
 
 
-        {/* ===================================================
-            FORMULARIO
-            =================================================== */}
+        {/* ========================================================
+            EDITAR
+            ======================================================== */}
 
         <CCol lg={8}>
 
           <CCard className="shadow-sm">
 
             <CCardHeader>
+
               <strong>
+
                 Editar mis datos
+
               </strong>
+
             </CCardHeader>
 
 
@@ -437,12 +558,16 @@ export default function MiPerfil() {
                 }
               >
 
-                {/* NOMBRE */}
+                {/* =================================================
+                    NOMBRE
+                    ================================================= */}
 
                 <div className="mb-3">
 
                   <CFormLabel>
+
                     Nombre completo
+
                   </CFormLabel>
 
 
@@ -462,6 +587,10 @@ export default function MiPerfil() {
                       )
                     }
 
+                    disabled={
+                      guardando
+                    }
+
                     required
 
                   />
@@ -469,12 +598,16 @@ export default function MiPerfil() {
                 </div>
 
 
-                {/* CORREO */}
+                {/* =================================================
+                    CORREO
+                    ================================================= */}
 
                 <div className="mb-3">
 
                   <CFormLabel>
+
                     Correo de la cuenta
+
                   </CFormLabel>
 
 
@@ -502,12 +635,16 @@ export default function MiPerfil() {
                 </div>
 
 
-                {/* CÉDULA */}
+                {/* =================================================
+                    CÉDULA
+                    ================================================= */}
 
                 <div className="mb-3">
 
                   <CFormLabel>
+
                     Cédula
+
                   </CFormLabel>
 
 
@@ -521,11 +658,15 @@ export default function MiPerfil() {
 
                     maxLength={10}
 
+                    disabled={
+                      guardando
+                    }
+
                     onChange={(
                       evento,
                     ) =>
-
                       setCedula(
+
                         evento
                           .target
                           .value
@@ -533,8 +674,8 @@ export default function MiPerfil() {
                             /\D/g,
                             '',
                           ),
-                      )
 
+                      )
                     }
 
                   />
@@ -552,32 +693,31 @@ export default function MiPerfil() {
                 </div>
 
 
-                {/* FOTO */}
+                {/* =================================================
+                    FOTO
+                    ================================================= */}
 
                 <div className="mb-4">
 
-                  <CFormLabel>
-                    Fotografía de perfil
-                  </CFormLabel>
+                  <ImageUploadField
 
-
-                  <CFormInput
-
-                    type="url"
+                    label="Fotografía de perfil"
 
                     value={
                       foto
                     }
 
-                    placeholder="https://..."
+                    carpeta="perfiles"
+
+                    disabled={
+                      guardando
+                    }
 
                     onChange={(
-                      evento,
+                      url,
                     ) =>
                       setFoto(
-                        evento
-                          .target
-                          .value,
+                        url,
                       )
                     }
 
@@ -585,6 +725,10 @@ export default function MiPerfil() {
 
                 </div>
 
+
+                {/* =================================================
+                    GUARDAR
+                    ================================================= */}
 
                 <CButton
 
