@@ -3,12 +3,24 @@ import {
 } from '../lib/supabase'
 
 
+/* ================================================================
+   CONFIGURACIÓN
+   ================================================================ */
+
 const BUCKET =
   'smart-parking-media'
 
 
-const MAX_BYTES =
+const MAX_ARCHIVO_ORIGINAL =
   5 * 1024 * 1024
+
+
+const MAX_DIMENSION =
+  1600
+
+
+const CALIDAD_WEBP =
+  0.82
 
 
 const TIPOS_PERMITIDOS = [
@@ -18,41 +30,19 @@ const TIPOS_PERMITIDOS = [
 ]
 
 
-function obtenerExtension(
+/* ================================================================
+   VALIDAR
+   ================================================================ */
+
+function validarArchivo(
   archivo,
 ) {
-  switch (
-    archivo.type
-  ) {
-    case 'image/png':
-      return 'png'
-
-    case 'image/webp':
-      return 'webp'
-
-    case 'image/jpeg':
-    default:
-      return 'jpg'
-  }
-}
-
-
-export async function subirImagen({
-  archivo,
-  carpeta = 'general',
-}) {
-  /* =========================================================
-     VALIDACIONES
-     ========================================================= */
-
   if (
     !archivo
   ) {
-    return {
-      ok: false,
-      error:
-        'Selecciona una imagen.',
-    }
+    return (
+      'Selecciona una imagen.'
+    )
   }
 
 
@@ -61,34 +51,350 @@ export async function subirImagen({
       archivo.type,
     )
   ) {
-    return {
-      ok: false,
-      error:
-        'Solo se permiten imágenes JPG, PNG o WEBP.',
-    }
+    return (
+      'Solo se permiten imágenes JPG, PNG o WEBP.'
+    )
   }
 
 
   if (
     archivo.size >
-    MAX_BYTES
+    MAX_ARCHIVO_ORIGINAL
+  ) {
+    return (
+      'La imagen original no puede superar los 5 MB.'
+    )
+  }
+
+
+  return null
+}
+
+
+/* ================================================================
+   CARGAR IMAGEN EN MEMORIA
+   ================================================================ */
+
+function cargarImagenHtml(
+  archivo,
+) {
+  return new Promise(
+    (
+      resolve,
+      reject,
+    ) => {
+
+      const url =
+        URL.createObjectURL(
+          archivo,
+        )
+
+
+      const imagen =
+        new Image()
+
+
+      imagen.onload =
+        () => {
+
+          URL.revokeObjectURL(
+            url,
+          )
+
+
+          resolve(
+            imagen,
+          )
+
+        }
+
+
+      imagen.onerror =
+        () => {
+
+          URL.revokeObjectURL(
+            url,
+          )
+
+
+          reject(
+            new Error(
+              'No se pudo leer la imagen seleccionada.',
+            ),
+          )
+
+        }
+
+
+      imagen.src =
+        url
+
+    },
+  )
+}
+
+
+/* ================================================================
+   CANVAS -> BLOB
+   ================================================================ */
+
+function canvasABlob(
+  canvas,
+) {
+  return new Promise(
+    (
+      resolve,
+      reject,
+    ) => {
+
+      canvas.toBlob(
+        (
+          blob,
+        ) => {
+
+          if (
+            !blob
+          ) {
+            reject(
+              new Error(
+                'No se pudo comprimir la imagen.',
+              ),
+            )
+
+            return
+          }
+
+
+          resolve(
+            blob,
+          )
+
+        },
+
+        'image/webp',
+
+        CALIDAD_WEBP,
+
+      )
+
+    },
+  )
+}
+
+
+/* ================================================================
+   COMPRIMIR
+   ================================================================ */
+
+async function comprimirImagen(
+  archivo,
+) {
+  const imagen =
+    await cargarImagenHtml(
+      archivo,
+    )
+
+
+  const anchoOriginal =
+    imagen.naturalWidth ||
+    imagen.width
+
+
+  const altoOriginal =
+    imagen.naturalHeight ||
+    imagen.height
+
+
+  if (
+    !anchoOriginal ||
+    !altoOriginal
+  ) {
+    throw new Error(
+      'La imagen no tiene dimensiones válidas.',
+    )
+  }
+
+
+  /* ==============================================================
+     ESCALA
+     ============================================================== */
+
+  const dimensionMayor =
+    Math.max(
+      anchoOriginal,
+      altoOriginal,
+    )
+
+
+  const escala =
+    dimensionMayor >
+    MAX_DIMENSION
+
+      ? MAX_DIMENSION /
+        dimensionMayor
+
+      : 1
+
+
+  const anchoFinal =
+    Math.max(
+      1,
+
+      Math.round(
+        anchoOriginal *
+        escala,
+      ),
+    )
+
+
+  const altoFinal =
+    Math.max(
+      1,
+
+      Math.round(
+        altoOriginal *
+        escala,
+      ),
+    )
+
+
+  /* ==============================================================
+     CANVAS
+     ============================================================== */
+
+  const canvas =
+    document.createElement(
+      'canvas',
+    )
+
+
+  canvas.width =
+    anchoFinal
+
+
+  canvas.height =
+    altoFinal
+
+
+  const contexto =
+    canvas.getContext(
+      '2d',
+      {
+        alpha:
+          true,
+      },
+    )
+
+
+  if (
+    !contexto
+  ) {
+    throw new Error(
+      'El navegador no pudo preparar la imagen.',
+    )
+  }
+
+
+  contexto.imageSmoothingEnabled =
+    true
+
+
+  contexto.imageSmoothingQuality =
+    'high'
+
+
+  contexto.drawImage(
+
+    imagen,
+
+    0,
+    0,
+
+    anchoFinal,
+    altoFinal,
+
+  )
+
+
+  const blob =
+    await canvasABlob(
+      canvas,
+    )
+
+
+  /* ==============================================================
+     ARCHIVO FINAL
+     ============================================================== */
+
+  const nombreBase =
+    archivo.name
+      .replace(
+        /\.[^.]+$/,
+        '',
+      )
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        '-',
+      )
+
+
+  return new File(
+    [
+      blob,
+    ],
+
+    `${nombreBase}.webp`,
+
+    {
+      type:
+        'image/webp',
+
+      lastModified:
+        Date.now(),
+    },
+  )
+}
+
+
+/* ================================================================
+   SUBIR
+   ================================================================ */
+
+export async function subirImagen({
+  archivo,
+  carpeta = 'general',
+}) {
+  /* ==============================================================
+     VALIDACIÓN
+     ============================================================== */
+
+  const errorValidacion =
+    validarArchivo(
+      archivo,
+    )
+
+
+  if (
+    errorValidacion
   ) {
     return {
       ok: false,
+
       error:
-        'La imagen no puede superar los 5 MB.',
+        errorValidacion,
     }
   }
 
 
-  /* =========================================================
+  /* ==============================================================
      USUARIO
-     ========================================================= */
+     ============================================================== */
 
   const {
     data: {
       user,
     },
+
     error:
       errorUsuario,
   } =
@@ -102,33 +408,67 @@ export async function subirImagen({
   ) {
     return {
       ok: false,
+
       error:
         'No existe una sesión activa.',
     }
   }
 
 
-  /* =========================================================
-     NOMBRE ÚNICO
-     ========================================================= */
+  /* ==============================================================
+     COMPRIMIR
+     ============================================================== */
 
-  const extension =
-    obtenerExtension(
-      archivo,
+  let archivoOptimizado
+
+
+  try {
+
+    archivoOptimizado =
+      await comprimirImagen(
+        archivo,
+      )
+
+  } catch (
+    error
+  ) {
+
+    console.error(
+      'Error comprimiendo imagen:',
+      error,
     )
 
+
+    return {
+      ok: false,
+
+      error:
+        error?.message ||
+        'No se pudo optimizar la imagen.',
+    }
+
+  }
+
+
+  /* ==============================================================
+     GENERAR NOMBRE ÚNICO
+     ============================================================== */
 
   const identificador =
     crypto.randomUUID()
 
 
   const ruta =
-    `${user.id}/${carpeta}/${Date.now()}-${identificador}.${extension}`
+    [
+      user.id,
+      carpeta,
+      `${Date.now()}-${identificador}.webp`,
+    ].join('/')
 
 
-  /* =========================================================
-     SUBIR
-     ========================================================= */
+  /* ==============================================================
+     SUBIR A STORAGE
+     ============================================================== */
 
   const {
     error:
@@ -140,16 +480,18 @@ export async function subirImagen({
       )
       .upload(
         ruta,
-        archivo,
+        archivoOptimizado,
         {
+
           cacheControl:
-            '3600',
+            '31536000',
 
           upsert:
             false,
 
           contentType:
-            archivo.type,
+            'image/webp',
+
         },
       )
 
@@ -165,15 +507,16 @@ export async function subirImagen({
 
     return {
       ok: false,
+
       error:
         errorSubida.message,
     }
   }
 
 
-  /* =========================================================
+  /* ==============================================================
      URL PÚBLICA
-     ========================================================= */
+     ============================================================== */
 
   const {
     data,
@@ -188,8 +531,7 @@ export async function subirImagen({
 
 
   const url =
-    data
-      ?.publicUrl
+    data?.publicUrl
 
 
   if (
@@ -197,11 +539,16 @@ export async function subirImagen({
   ) {
     return {
       ok: false,
+
       error:
-        'La imagen se subió, pero no se pudo obtener su URL.',
+        'La imagen se subió, pero no se pudo obtener la URL pública.',
     }
   }
 
+
+  /* ==============================================================
+     RESULTADO
+     ============================================================== */
 
   return {
     ok: true,
@@ -209,5 +556,12 @@ export async function subirImagen({
     url,
 
     ruta,
+
+    originalBytes:
+      archivo.size,
+
+    optimizadoBytes:
+      archivoOptimizado.size,
+
   }
 }

@@ -1,48 +1,18 @@
 import {
+  lazy,
+  Suspense,
+} from 'react'
+
+import {
   Navigate,
   Route,
   Routes,
   useLocation,
 } from 'react-router-dom'
 
-import Inicio
-  from './pages/Inicio'
-
-import Estacionamiento
-  from './pages/Estacionamiento'
-
-import DetalleEspacio
-  from './pages/DetalleEspacio'
-
-import Login
-  from './pages/Login'
-
-import Registro
-  from './pages/Registro'
-
-import ListaVehiculos
-  from './views/parqueadero/ListaVehiculos'
-
-import MapaParqueadero
-  from './views/parqueadero/MapaParqueadero'
-
-import GestionParqueaderoLayout
-  from './views/parqueadero/GestionParqueaderoLayout'
-
-import PuestosGestion
-  from './views/parqueadero/PuestosGestion'
-
-import Propietarios
-  from './views/parqueadero/Propietarios'
-
-import HistorialParqueadero
-  from './views/parqueadero/HistorialParqueadero'
-
-import MiPerfil
-  from './views/cuenta/MiPerfil'
-
-import MisVehiculos
-  from './views/cuenta/MisVehiculos'
+import {
+  CSpinner,
+} from '@coreui/react'
 
 import AppHeader
   from './components/AppHeader'
@@ -54,47 +24,181 @@ import {
   useAuth,
 } from './context/AuthContext'
 
-
-export default function App() {
-  const ubicacion =
-    useLocation()
-
-
-  const {
-    autenticado,
-  } =
-    useAuth()
+import {
+  ParkingProvider,
+} from './context/ParkingContext'
 
 
-  /* =========================================================
-     LOGIN / REGISTRO
-     ========================================================= */
+/* ================================================================
+   CARGA DIFERIDA DE PÁGINAS
 
-  const esPaginaAuth =
-    ubicacion.pathname ===
-      '/login'
-    ||
-    ubicacion.pathname ===
-      '/registro'
+   Cada módulo se descargará cuando realmente sea necesario.
+   ================================================================ */
 
-
-  /* =========================================================
-     LOGIN OBLIGATORIO
-     ========================================================= */
-
-  if (
-    !autenticado &&
-    !esPaginaAuth
-  ) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    )
-  }
+const Inicio =
+  lazy(
+    () =>
+      import(
+        './pages/Inicio'
+      ),
+  )
 
 
+const Estacionamiento =
+  lazy(
+    () =>
+      import(
+        './pages/Estacionamiento'
+      ),
+  )
+
+
+const DetalleEspacio =
+  lazy(
+    () =>
+      import(
+        './pages/DetalleEspacio'
+      ),
+  )
+
+
+const Login =
+  lazy(
+    () =>
+      import(
+        './pages/Login'
+      ),
+  )
+
+
+const Registro =
+  lazy(
+    () =>
+      import(
+        './pages/Registro'
+      ),
+  )
+
+
+const ListaVehiculos =
+  lazy(
+    () =>
+      import(
+        './views/parqueadero/ListaVehiculos'
+      ),
+  )
+
+
+const MapaParqueadero =
+  lazy(
+    () =>
+      import(
+        './views/parqueadero/MapaParqueadero'
+      ),
+  )
+
+
+const GestionParqueaderoLayout =
+  lazy(
+    () =>
+      import(
+        './views/parqueadero/GestionParqueaderoLayout'
+      ),
+  )
+
+
+const PuestosGestion =
+  lazy(
+    () =>
+      import(
+        './views/parqueadero/PuestosGestion'
+      ),
+  )
+
+
+const Propietarios =
+  lazy(
+    () =>
+      import(
+        './views/parqueadero/Propietarios'
+      ),
+  )
+
+
+const HistorialParqueadero =
+  lazy(
+    () =>
+      import(
+        './views/parqueadero/HistorialParqueadero'
+      ),
+  )
+
+
+const MiPerfil =
+  lazy(
+    () =>
+      import(
+        './views/cuenta/MiPerfil'
+      ),
+  )
+
+
+const MisVehiculos =
+  lazy(
+    () =>
+      import(
+        './views/cuenta/MisVehiculos'
+      ),
+  )
+
+
+/* ================================================================
+   LOADER DE RUTA
+   ================================================================ */
+
+function CargandoRuta() {
+  return (
+    <div
+      style={{
+        minHeight:
+          300,
+
+        display:
+          'grid',
+
+        placeItems:
+          'center',
+      }}
+    >
+
+      <div className="text-center">
+
+        <CSpinner
+          color="success"
+        />
+
+
+        <div
+          className="mt-3 text-body-secondary"
+        >
+          Cargando módulo...
+        </div>
+
+      </div>
+
+    </div>
+  )
+}
+
+
+/* ================================================================
+   CONTENIDO PRINCIPAL
+   ================================================================ */
+
+function AplicacionAutenticada({
+  esPaginaAuth,
+  autenticado,
+}) {
   return (
     <div
       className={
@@ -113,6 +217,10 @@ export default function App() {
       )}
 
 
+      {/* =====================================================
+          MAIN
+          ===================================================== */}
+
       <main
         className={
           esPaginaAuth
@@ -121,180 +229,188 @@ export default function App() {
         }
       >
 
-        {/* =====================================================
-            MIGA DE PAN GLOBAL
-
-            Se muestra automáticamente
-            según la ruta actual.
-            ===================================================== */}
+        {/* ===================================================
+            BREADCRUMB
+            =================================================== */}
 
         {!esPaginaAuth && (
           <AppBreadcrumb />
         )}
 
 
-        <Routes>
+        {/* ===================================================
+            RUTAS
+            =================================================== */}
 
-          {/* =================================================
-              MENÚ PRINCIPAL
-              ================================================= */}
+        <Suspense
+          fallback={
+            <CargandoRuta />
+          }
+        >
 
-          <Route
-            path="/"
-            element={
-              <Inicio />
-            }
-          />
+          <Routes>
 
-
-          {/* =================================================
-              PARQUEADERO
-              ================================================= */}
-
-          <Route
-            path="/estacionamiento"
-            element={
-              <Estacionamiento />
-            }
-          />
-
-
-          <Route
-            path="/espacios/:id"
-            element={
-              <DetalleEspacio />
-            }
-          />
-
-
-          {/* =================================================
-              MAPA
-              ================================================= */}
-
-          <Route
-            path="/parqueadero/mapa"
-            element={
-              <MapaParqueadero />
-            }
-          />
-
-
-          {/* =================================================
-              MÓDULO VEHÍCULOS / PUESTOS /
-              PROPIETARIOS / HISTORIAL
-              ================================================= */}
-
-          <Route
-            path="/parqueadero"
-            element={
-              <GestionParqueaderoLayout />
-            }
-          >
+            {/* ===============================================
+                INICIO
+                =============================================== */}
 
             <Route
-              index
+              path="/"
+              element={
+                <Inicio />
+              }
+            />
+
+
+            {/* ===============================================
+                PARQUEADERO
+                =============================================== */}
+
+            <Route
+              path="/estacionamiento"
+              element={
+                <Estacionamiento />
+              }
+            />
+
+
+            <Route
+              path="/espacios/:id"
+              element={
+                <DetalleEspacio />
+              }
+            />
+
+
+            {/* ===============================================
+                MAPA
+                =============================================== */}
+
+            <Route
+              path="/parqueadero/mapa"
+              element={
+                <MapaParqueadero />
+              }
+            />
+
+
+            {/* ===============================================
+                GESTIÓN
+                =============================================== */}
+
+            <Route
+              path="/parqueadero"
+              element={
+                <GestionParqueaderoLayout />
+              }
+            >
+
+              <Route
+                index
+                element={
+                  <Navigate
+                    to="vehiculos"
+                    replace
+                  />
+                }
+              />
+
+
+              <Route
+                path="vehiculos"
+                element={
+                  <ListaVehiculos />
+                }
+              />
+
+
+              <Route
+                path="puestos"
+                element={
+                  <PuestosGestion />
+                }
+              />
+
+
+              <Route
+                path="propietarios"
+                element={
+                  <Propietarios />
+                }
+              />
+
+
+              <Route
+                path="historial"
+                element={
+                  <HistorialParqueadero />
+                }
+              />
+
+            </Route>
+
+
+            {/* ===============================================
+                CUENTA
+                =============================================== */}
+
+            <Route
+              path="/cuenta/perfil"
+              element={
+                <MiPerfil />
+              }
+            />
+
+
+            <Route
+              path="/cuenta/vehiculos"
+              element={
+                <MisVehiculos />
+              }
+            />
+
+
+            {/* ===============================================
+                LOGIN
+                =============================================== */}
+
+            <Route
+              path="/login"
+              element={
+                <Login />
+              }
+            />
+
+
+            <Route
+              path="/registro"
+              element={
+                <Registro />
+              }
+            />
+
+
+            {/* ===============================================
+                404
+                =============================================== */}
+
+            <Route
+              path="*"
               element={
                 <Navigate
-                  to="vehiculos"
+                  to={
+                    autenticado
+                      ? '/'
+                      : '/login'
+                  }
                   replace
                 />
               }
             />
 
+          </Routes>
 
-            <Route
-              path="vehiculos"
-              element={
-                <ListaVehiculos />
-              }
-            />
-
-
-            <Route
-              path="puestos"
-              element={
-                <PuestosGestion />
-              }
-            />
-
-
-            <Route
-              path="propietarios"
-              element={
-                <Propietarios />
-              }
-            />
-
-
-            <Route
-              path="historial"
-              element={
-                <HistorialParqueadero />
-              }
-            />
-
-          </Route>
-
-
-          {/* =================================================
-              CUENTA
-              ================================================= */}
-
-          <Route
-            path="/cuenta/perfil"
-            element={
-              <MiPerfil />
-            }
-          />
-
-
-          <Route
-            path="/cuenta/vehiculos"
-            element={
-              <MisVehiculos />
-            }
-          />
-
-
-          {/* =================================================
-              AUTENTICACIÓN
-              ================================================= */}
-
-          <Route
-            path="/login"
-            element={
-              <Login />
-            }
-          />
-
-
-          <Route
-            path="/registro"
-            element={
-              <Registro />
-            }
-          />
-
-
-          {/* =================================================
-              404
-              ================================================= */}
-
-          <Route
-            path="*"
-            element={
-              <Navigate
-                to={
-                  autenticado
-                    ? '/'
-                    : '/login'
-                }
-                replace
-              />
-            }
-          />
-
-        </Routes>
+        </Suspense>
 
       </main>
 
@@ -308,11 +424,9 @@ export default function App() {
         <footer className="app-footer">
 
           <p>
-
             UTEQ · Aplicaciones
             Telemáticas Basadas en Web
             · Smart Parking UTEQ
-
           </p>
 
         </footer>
@@ -320,5 +434,89 @@ export default function App() {
       )}
 
     </div>
+  )
+}
+
+
+/* ================================================================
+   APP
+   ================================================================ */
+
+export default function App() {
+  const ubicacion =
+    useLocation()
+
+
+  const {
+    autenticado,
+  } =
+    useAuth()
+
+
+  const esPaginaAuth =
+    ubicacion.pathname ===
+      '/login'
+    ||
+    ubicacion.pathname ===
+      '/registro'
+
+
+  /* ==============================================================
+     PROTEGER RUTAS
+     ============================================================== */
+
+  if (
+    !autenticado &&
+    !esPaginaAuth
+  ) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    )
+  }
+
+
+  /* ==============================================================
+     LOGIN / REGISTRO
+
+     No necesitamos ParkingProvider aquí.
+     ============================================================== */
+
+  if (
+    esPaginaAuth
+  ) {
+    return (
+      <AplicacionAutenticada
+        esPaginaAuth
+        autenticado={
+          autenticado
+        }
+      />
+    )
+  }
+
+
+  /* ==============================================================
+     APLICACIÓN AUTENTICADA
+
+     El provider permanece montado al cambiar de página.
+     ============================================================== */
+
+  return (
+    <ParkingProvider>
+
+      <AplicacionAutenticada
+        esPaginaAuth={
+          false
+        }
+
+        autenticado={
+          autenticado
+        }
+      />
+
+    </ParkingProvider>
   )
 }
