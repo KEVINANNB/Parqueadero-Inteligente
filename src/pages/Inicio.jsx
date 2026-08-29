@@ -17,7 +17,6 @@ import {
   cilCarAlt,
   cilList,
   cilMap,
-  cilSettings,
   cilSpeedometer,
   cilUser,
 } from '@coreui/icons'
@@ -26,6 +25,10 @@ import {
   useAuth,
 } from '../context/AuthContext'
 
+
+/* =========================================================
+   TARJETA DEL MENÚ
+   ========================================================= */
 
 function TarjetaMenu({
   titulo,
@@ -40,15 +43,25 @@ function TarjetaMenu({
       md={4}
       xl={3}
     >
+
       <Link
         to={ruta}
         className="text-decoration-none"
       >
-        <CCard className="menu-sga-card h-100 shadow-sm">
+
+        <CCard
+          className="menu-sga-card h-100 shadow-sm"
+        >
 
           <CCardBody>
 
-            <div className="d-flex justify-content-between align-items-start mb-3">
+            {/* ===============================================
+                ICONO + ESTRELLA
+                =============================================== */}
+
+            <div
+              className="d-flex justify-content-between align-items-start mb-3"
+            >
 
               <div className="menu-sga-icon">
 
@@ -70,23 +83,41 @@ function TarjetaMenu({
             </div>
 
 
+            {/* ===============================================
+                TÍTULO
+                =============================================== */}
+
             <h5 className="mb-2">
+
               {titulo}
+
             </h5>
 
 
+            {/* ===============================================
+                DESCRIPCIÓN
+                =============================================== */}
+
             <p className="small mb-0">
+
               {descripcion}
+
             </p>
 
           </CCardBody>
 
         </CCard>
+
       </Link>
+
     </CCol>
   )
 }
 
+
+/* =========================================================
+   PÁGINA PRINCIPAL
+   ========================================================= */
 
 export default function Inicio() {
   const {
@@ -94,10 +125,19 @@ export default function Inicio() {
     esAdmin,
     vistaActiva,
     puedeAdministrar,
-  } = useAuth()
+  } =
+    useAuth()
 
+
+  /* =========================================================
+     OPCIONES PRINCIPALES
+     ========================================================= */
 
   const opciones = [
+
+    /* -------------------------------------------------------
+       PARQUEADERO
+       ------------------------------------------------------- */
 
     {
       titulo:
@@ -114,13 +154,17 @@ export default function Inicio() {
     },
 
 
+    /* -------------------------------------------------------
+       VEHÍCULOS Y PROPIETARIOS
+       ------------------------------------------------------- */
+
     {
       titulo:
         'Vehículos y propietarios',
 
       descripcion:
         puedeAdministrar
-          ? 'Administra todos los vehículos y propietarios registrados.'
+          ? 'Administra vehículos, propietarios, puestos e historial del sistema.'
           : 'Consulta los vehículos autorizados y sus propietarios.',
 
       icono:
@@ -131,12 +175,16 @@ export default function Inicio() {
     },
 
 
+    /* -------------------------------------------------------
+       MAPA
+       ------------------------------------------------------- */
+
     {
       titulo:
         'Mapa del parqueadero',
 
       descripcion:
-        'Visualiza los 80 espacios sobre el mapa del campus y consulta cada puesto.',
+        'Visualiza los 80 espacios y consulta el estado de cada puesto.',
 
       icono:
         cilMap,
@@ -148,8 +196,16 @@ export default function Inicio() {
   ]
 
 
+  /* =========================================================
+     OPCIONES DEL USUARIO AUTENTICADO
+     ========================================================= */
+
   if (autenticado) {
     opciones.push(
+
+      /* -----------------------------------------------------
+         MIS VEHÍCULOS
+         ----------------------------------------------------- */
 
       {
         titulo:
@@ -166,6 +222,10 @@ export default function Inicio() {
       },
 
 
+      /* -----------------------------------------------------
+         MI PERFIL
+         ----------------------------------------------------- */
+
       {
         titulo:
           'Mi perfil',
@@ -181,7 +241,20 @@ export default function Inicio() {
       },
 
     )
-  } else {
+  }
+
+
+  /* =========================================================
+     SI NO HAY SESIÓN
+     =========================================================
+
+     En tu flujo actual normalmente esto no debería mostrarse
+     porque App.jsx obliga a iniciar sesión.
+
+     Lo dejamos como respaldo.
+     ========================================================= */
+
+  if (!autenticado) {
     opciones.push({
 
       titulo:
@@ -200,48 +273,47 @@ export default function Inicio() {
   }
 
 
-  if (puedeAdministrar) {
-    opciones.push({
-
-      titulo:
-        'Administración',
-
-      descripcion:
-        'Acceso completo para crear, editar, autorizar y eliminar vehículos.',
-
-      icono:
-        cilSettings,
-
-      ruta:
-        '/parqueadero/vehiculos',
-
-    })
-  }
-
+  /* =========================================================
+     RENDER
+     ========================================================= */
 
   return (
     <div className="dashboard-sga">
 
+      {/* =====================================================
+          ENCABEZADO
+          ===================================================== */}
+
       <div className="mb-4">
 
-        <small className="text-success fw-semibold">
+        <small
+          className="text-success fw-semibold"
+        >
           UTEQ SMART PARKING
         </small>
 
 
         <h2 className="mt-1 mb-2">
+
           Menú principal
+
         </h2>
 
 
         <p className="text-body-secondary">
+
           Selecciona una opción para
           acceder a los servicios del
           sistema.
+
         </p>
 
       </div>
 
+
+      {/* =====================================================
+          MENSAJE DE MODO ADMINISTRADOR
+          ===================================================== */}
 
       {esAdmin && (
 
@@ -252,6 +324,7 @@ export default function Inicio() {
               ? 'warning'
               : 'info'
           }
+
           className="mb-4"
         >
 
@@ -259,6 +332,7 @@ export default function Inicio() {
           'admin' ? (
 
             <>
+
               Estás utilizando la{' '}
 
               <strong>
@@ -268,11 +342,13 @@ export default function Inicio() {
               . Tienes habilitados los
               controles de administración
               del sistema.
+
             </>
 
           ) : (
 
             <>
+
               Tu cuenta es administrador,
               pero estás utilizando la{' '}
 
@@ -280,7 +356,10 @@ export default function Inicio() {
                 Vista usuario
               </strong>
 
-              .
+              . Solo se muestran las
+              opciones correspondientes
+              a un usuario normal.
+
             </>
 
           )}
@@ -289,6 +368,10 @@ export default function Inicio() {
 
       )}
 
+
+      {/* =====================================================
+          TARJETAS
+          ===================================================== */}
 
       <CRow className="g-4">
 
@@ -301,6 +384,7 @@ export default function Inicio() {
               key={
                 opcion.titulo
               }
+
               {...opcion}
             />
 
