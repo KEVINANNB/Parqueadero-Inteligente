@@ -449,22 +449,62 @@ export default function App() {
 
   const {
     autenticado,
+    cargando,
   } =
     useAuth()
 
 
   const esPaginaAuth =
     ubicacion.pathname ===
-      '/login'
+    '/login'
     ||
     ubicacion.pathname ===
-      '/registro'
+    '/registro'
 
 
   /* ==============================================================
      PROTEGER RUTAS
      ============================================================== */
+  if (
+    cargando
+  ) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: '#ffffff',
+        }}
+      >
 
+        <div
+          className="text-center"
+        >
+
+          <CSpinner
+            color="success"
+          />
+
+
+          <h5 className="mt-3 mb-1">
+
+            Smart Parking UTEQ
+
+          </h5>
+
+
+          <div className="text-body-secondary">
+
+            Recuperando tu sesión...
+
+          </div>
+
+        </div>
+
+      </div>
+    )
+  }
   if (
     !autenticado &&
     !esPaginaAuth
