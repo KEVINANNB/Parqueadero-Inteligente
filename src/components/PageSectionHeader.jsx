@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 export default function PageSectionHeader({
   breadcrumb = [],
   eyebrow = 'CAMPUS UTEQ · QUEVEDO',
@@ -9,127 +11,193 @@ export default function PageSectionHeader({
       <style>{`
         .page-section-header {
           width: 100%;
-          margin: 0 0 22px 0;
-          padding-top: 4px;
+          margin: 0 0 24px 0;
+          padding-top: 2px;
         }
 
         .page-section-breadcrumb {
           display: flex;
           flex-wrap: wrap;
           align-items: center;
-          gap: 6px;
 
-          margin-bottom: 14px;
+          gap: 7px;
 
-          font-size: 12px;
-          color: #3b82f6;
+          min-height: 26px;
+
+          margin-bottom: 13px;
+
+          font-size: 11px;
+          font-weight: 500;
+
+          color: #1779b5;
         }
 
-        .page-section-breadcrumb a,
-        .page-section-breadcrumb span {
+        .page-section-breadcrumb a {
+          color: #1779b5;
           text-decoration: none;
-          color: inherit;
+
+          transition: color .15s ease;
+        }
+
+        .page-section-breadcrumb a:hover {
+          color: #075985;
+          text-decoration: underline;
+        }
+
+        .page-section-breadcrumb-current {
+          color: #64748b;
+        }
+
+        .page-section-breadcrumb-separator {
+          color: #94a3b8;
         }
 
         .page-section-divider {
-          width: 180px;
-          max-width: 100%;
-          height: 4px;
-          border-radius: 999px;
-          background: #111827;
+          width: 185px;
+          height: 3px;
+
           margin-bottom: 14px;
+
+          border-radius: 999px;
+
+          background: #111827;
         }
 
         .page-section-eyebrow {
           margin: 0 0 8px 0;
 
-          font-size: 12px;
-          font-weight: 600;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-
           color: #15803d;
+
+          font-size: 11px;
+          font-weight: 600;
+
+          letter-spacing: .22em;
+
+          text-transform: uppercase;
         }
 
         .page-section-title {
-          margin: 0 0 8px 0;
-
-          font-size: 30px;
-          line-height: 1.12;
-          font-weight: 700;
+          margin: 0 0 9px 0;
 
           color: #111827;
+
+          font-size: clamp(29px, 3vw, 38px);
+          font-weight: 600;
+
+          line-height: 1.08;
+
+          letter-spacing: -0.025em;
         }
 
         .page-section-subtitle {
-          margin: 0;
-
           max-width: 760px;
 
-          font-size: 14px;
-          line-height: 1.6;
+          margin: 0;
 
-          color: #4b5563;
+          color: #5b6472;
+
+          font-size: 13px;
+          line-height: 1.65;
         }
 
-        @media (max-width: 900px) {
-          .page-section-title {
-            font-size: 26px;
-          }
-        }
-
-        @media (max-width: 600px) {
-          .page-section-header {
-            margin-bottom: 18px;
-          }
-
+        @media (max-width: 768px) {
           .page-section-divider {
-            width: 120px;
-            height: 3px;
-          }
-
-          .page-section-eyebrow {
-            font-size: 11px;
-            letter-spacing: 0.16em;
+            width: 135px;
           }
 
           .page-section-title {
-            font-size: 22px;
+            font-size: 27px;
           }
 
           .page-section-subtitle {
-            font-size: 13px;
+            font-size: 12px;
           }
         }
       `}</style>
 
       <section className="page-section-header">
+
+        {/* BREADCRUMB */}
+
         {breadcrumb.length > 0 && (
-          <div className="page-section-breadcrumb">
-            {breadcrumb.map((item, index) => (
-              <span key={`${item}-${index}`}>
-                {item}
-                {index < breadcrumb.length - 1 ? ' / ' : ''}
-              </span>
-            ))}
-          </div>
+          <nav
+            className="page-section-breadcrumb"
+            aria-label="Navegación"
+          >
+            {breadcrumb.map((item, index) => {
+              const esUltimo =
+                index === breadcrumb.length - 1
+
+              const label =
+                typeof item === 'string'
+                  ? item
+                  : item.label
+
+              const to =
+                typeof item === 'string'
+                  ? null
+                  : item.to
+
+              return (
+                <span
+                  key={`${label}-${index}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 7,
+                  }}
+                >
+                  {!esUltimo && to ? (
+                    <Link to={to}>
+                      {label}
+                    </Link>
+                  ) : (
+                    <span
+                      className={
+                        esUltimo
+                          ? 'page-section-breadcrumb-current'
+                          : ''
+                      }
+                    >
+                      {label}
+                    </span>
+                  )}
+
+                  {!esUltimo && (
+                    <span className="page-section-breadcrumb-separator">
+                      /
+                    </span>
+                  )}
+                </span>
+              )
+            })}
+          </nav>
         )}
 
+        {/* LÍNEA NEGRA */}
+
         <div className="page-section-divider" />
+
+        {/* UBICACIÓN */}
 
         <p className="page-section-eyebrow">
           {eyebrow}
         </p>
 
+        {/* TÍTULO */}
+
         <h1 className="page-section-title">
           {title}
         </h1>
 
-        {subtitle ? (
+        {/* DESCRIPCIÓN */}
+
+        {subtitle && (
           <p className="page-section-subtitle">
             {subtitle}
           </p>
-        ) : null}
+        )}
+
       </section>
     </>
   )
