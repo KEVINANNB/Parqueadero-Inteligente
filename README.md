@@ -28,7 +28,7 @@ La interfaz utiliza **React, Vite y CoreUI**, con navegación protegida por aute
 ## ✨ Vista general
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KEVINANNB/Parqueadero-Inteligente/main/docs/readme/01-menu-administrador.png" alt="Menú principal del administrador" width="95%">
+  <img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/f510cb71-edc3-402d-8ed0-c520a8c1f1e3" />
 </p>
 
 El menú principal adapta las opciones según el rol autenticado. La vista administrativa habilita herramientas de gestión, mientras que el usuario normal conserva acceso únicamente a las funciones asociadas a su cuenta y sus vehículos.
@@ -38,7 +38,7 @@ El menú principal adapta las opciones según el rol autenticado. La vista admin
 ## 🚦 Disponibilidad del parqueadero
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KEVINANNB/Parqueadero-Inteligente/main/docs/readme/02-disponibilidad.png" alt="Disponibilidad del parqueadero" width="95%">
+  <img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/29d66a16-aeae-4873-ab2a-fcd97220bec2" />
 </p>
 
 El parqueadero está organizado en **80 espacios**, distribuidos en cuatro columnas:
@@ -64,7 +64,7 @@ La vista de disponibilidad permite filtrar por estado y columna.
 ## 🗺️ Mapa interactivo
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KEVINANNB/Parqueadero-Inteligente/main/docs/readme/03-mapa-interactivo.png" alt="Mapa interactivo del parqueadero" width="95%">
+  <img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/f02aa631-c063-4ebf-a337-5d828cc40179" />
 </p>
 
 El mapa visual representa los 80 espacios sobre una imagen personalizada del estacionamiento. Al seleccionar un puesto se puede consultar información como:
@@ -82,7 +82,7 @@ El mapa visual representa los 80 espacios sobre una imagen personalizada del est
 ## 🚗 Vehículos y propietarios
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KEVINANNB/Parqueadero-Inteligente/main/docs/readme/04-vehiculos-propietarios.png" alt="CRUD de vehículos y propietarios" width="95%">
+  <img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/cf609474-ccdf-44d9-aca2-4b33578f9a48" />
 </p>
 
 El módulo principal implementa un **CRUD completo** para vehículos y propietarios.
@@ -121,7 +121,7 @@ Durante las operaciones se muestran **indicadores de carga, mensajes de éxito/e
 ## 🅿️ Gestión de puestos
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KEVINANNB/Parqueadero-Inteligente/main/docs/readme/05-puestos.png" alt="Gestión de puestos del parqueadero" width="95%">
+  <img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/83227d38-5c0c-4d4d-9a05-0c5892379bb1" />
 </p>
 
 La sección de puestos ofrece una vista administrativa de los 80 espacios con información consolidada:
@@ -142,7 +142,7 @@ La sección de puestos ofrece una vista administrativa de los 80 espacios con in
 ## 👥 Propietarios y cuentas
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KEVINANNB/Parqueadero-Inteligente/main/docs/readme/06-propietarios-cuentas.png" alt="Propietarios y cuentas registradas" width="95%">
+  <img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/dc953f25-874f-49b3-8eb5-fe1397385fe1" />
 </p>
 
 La aplicación distingue entre dos conceptos:
@@ -169,7 +169,7 @@ El administrador puede consultar:
 ## 🕘 Historial general
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KEVINANNB/Parqueadero-Inteligente/main/docs/readme/07-historial.png" alt="Historial general del administrador" width="95%">
+  <img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/410e54b8-0ad4-463c-9a6b-876e27e620d3" />
 </p>
 
 El historial mantiene trazabilidad de eventos asociados al parqueadero.
@@ -189,7 +189,7 @@ Esta separación se aplica mediante control de rol y políticas de seguridad en 
 ## 🔐 Inicio de sesión
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KEVINANNB/Parqueadero-Inteligente/main/docs/readme/08-login.png" alt="Inicio de sesión UTEQ Smart Parking" width="95%">
+ <img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/6812d51a-19ed-44c8-8737-eb5af79ab512" />
 </p>
 
 El sistema incorpora autenticación para proteger las rutas privadas de la aplicación.
@@ -208,7 +208,7 @@ Funciones disponibles:
 ## 👤 Perfil del usuario
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KEVINANNB/Parqueadero-Inteligente/main/docs/readme/09-perfil.png" alt="Perfil del usuario" width="95%">
+  <img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/cf92490f-fb81-48f7-a957-29c825292df4" />
 </p>
 
 Cada cuenta dispone de un área personal para consultar y actualizar información autorizada, incluyendo:
