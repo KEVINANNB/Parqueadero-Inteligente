@@ -33,356 +33,490 @@ const COLUMNAS_MI_CUENTA = `
 `
 
 
+const COLUMNAS_PERFIL = `
+  usuario_id,
+  nombre,
+  correo,
+  cedula,
+  foto_url,
+  activo,
+  created_at,
+  updated_at
+`
+
+
+function enmascararCedula(
+  cedula,
+) {
+  const texto =
+    String(
+      cedula || '',
+    )
+      .replace(
+        /\D/g,
+        '',
+      )
+
+
+  if (
+    texto.length !== 10
+  ) {
+    return 'No registrada'
+  }
+
+
+  return (
+    '******' +
+    texto.slice(-4)
+  )
+}
+
+
 export default function useMiCuenta() {
   const {
     usuario,
-  } = useAuth()
+  } =
+    useAuth()
+
+
+  const [
+    perfilDb,
+    setPerfilDb,
+  ] =
+    useState(null)
 
 
   const [
     vehiculos,
     setVehiculos,
-  ] = useState([])
+  ] =
+    useState([])
 
 
   const [
     cargando,
     setCargando,
-  ] = useState(true)
+  ] =
+    useState(true)
 
 
   const [
     error,
     setError,
-  ] = useState('')
+  ] =
+    useState('')
 
 
-  /*
-   * =============================================================
-   * CARGAR MIS VEHÍCULOS
-   * =============================================================
-   *
-   * 1. Comprueba que exista sesión.
-   * 2. Intenta vincular por correo si usuario_id todavía es NULL.
-   * 3. Consulta únicamente:
-   *
-   *      usuario_id = auth.uid()
-   *
-   * De esta forma ya no dependemos del correo para todas
-   * las operaciones.
-   */
+  /* =========================================================
+     CARGAR PERFIL + VEHÍCULOS
+     ========================================================= */
+
   const cargar =
-    useCallback(async () => {
+    useCallback(
+      async () => {
 
-      if (!usuario?.id) {
+        if (
+          !usuario?.id
+        ) {
+          setPerfilDb(null)
 
-        setVehiculos([])
+          setVehiculos([])
+
+          setCargando(false)
+
+          return
+        }
+
+
+        setCargando(true)
+
+        setError('')
+
+
+        /* =====================================================
+           1. PERFIL
+           ===================================================== */
+
+        const {
+          data:
+            perfilData,
+
+          error:
+            errorPerfil,
+        } =
+          await supabase
+            .from('perfiles')
+            .select(
+              COLUMNAS_PERFIL,
+            )
+            .eq(
+              'usuario_id',
+              usuario.id,
+            )
+            .maybeSingle()
+
+
+        if (
+          errorPerfil
+        ) {
+          console.error(
+            'Error cargando perfil:',
+            errorPerfil,
+          )
+
+          setError(
+            errorPerfil.message,
+          )
+        }
+
+
+        setPerfilDb(
+          perfilData ??
+          null,
+        )
+
+
+        /* =====================================================
+           2. VINCULAR VEHÍCULOS ANTIGUOS POR CORREO
+           ===================================================== */
+
+        const {
+          error:
+            errorVinculacion,
+        } =
+          await supabase.rpc(
+            'vincular_mis_vehiculos',
+          )
+
+
+        if (
+          errorVinculacion
+        ) {
+          console.warn(
+            'No se pudo ejecutar vinculación automática:',
+            errorVinculacion,
+          )
+        }
+
+
+        /* =====================================================
+           3. MIS VEHÍCULOS
+           ===================================================== */
+
+        const {
+          data:
+            vehiculosData,
+
+          error:
+            errorVehiculos,
+        } =
+          await supabase
+            .from('vehiculos')
+            .select(
+              COLUMNAS_MI_CUENTA,
+            )
+            .eq(
+              'usuario_id',
+              usuario.id,
+            )
+            .order(
+              'id',
+              {
+                ascending:
+                  true,
+              },
+            )
+
+
+        if (
+          errorVehiculos
+        ) {
+          console.error(
+            'Error cargando vehículos:',
+            errorVehiculos,
+          )
+
+          setVehiculos([])
+
+          setError(
+            errorVehiculos.message,
+          )
+        } else {
+          setVehiculos(
+            vehiculosData ??
+            [],
+          )
+        }
+
 
         setCargando(false)
 
-        return
-
-      }
-
-
-      setCargando(true)
-
-      setError('')
+      },
+      [
+        usuario?.id,
+      ],
+    )
 
 
-      /*
-       * ---------------------------------------------------------
-       * Vinculación automática.
-       *
-       * Si el registro antiguo tiene:
-       *
-       * usuario_id = NULL
-       *
-       * la función buscará:
-       *
-       * correo institucional
-       *
-       * o:
-       *
-       * correo Microsoft
-       *
-       * y asignará el UUID.
-       * ---------------------------------------------------------
-       */
-
-      const {
-        error:
-          errorVinculacion,
-      } =
-        await supabase.rpc(
-          'vincular_mis_vehiculos',
-        )
+  useEffect(
+    () => {
+      cargar()
+    },
+    [
+      cargar,
+    ],
+  )
 
 
-      if (errorVinculacion) {
+  /* =========================================================
+     PERFIL FINAL
+     ========================================================= */
 
-        console.error(
-          'Error vinculando vehículos:',
-          errorVinculacion,
-        )
-
-
-        setVehiculos([])
-
-        setError(
-          `No se pudo vincular la cuenta con sus vehículos: ${errorVinculacion.message}`,
-        )
-
-        setCargando(false)
-
-        return
-
-      }
-
-
-      /*
-       * ---------------------------------------------------------
-       * Ahora consultamos por UUID.
-       * ---------------------------------------------------------
-       */
-
-      const {
-        data,
-        error:
-          errorSupabase,
-      } =
-        await supabase
-          .from('vehiculos')
-          .select(
-            COLUMNAS_MI_CUENTA,
-          )
-          .eq(
-            'usuario_id',
-            usuario.id,
-          )
-          .order(
-            'id',
-            {
-              ascending: true,
-            },
-          )
-
-
-      if (errorSupabase) {
-
-        console.error(
-          'Error cargando mis vehículos:',
-          errorSupabase,
-        )
-
-
-        setVehiculos([])
-
-        setError(
-          errorSupabase.message,
-        )
-
-      } else {
-
-        setVehiculos(
-          data ?? [],
-        )
-
-      }
-
-
-      setCargando(false)
-
-    }, [
-      usuario?.id,
-    ])
-
-
-  useEffect(() => {
-
-    cargar()
-
-  }, [
-    cargar,
-  ])
-
-
-  /*
-   * =============================================================
-   * PERFIL
-   * =============================================================
-   *
-   * Actualmente los datos del propietario están dentro
-   * de vehiculos.
-   *
-   * Tomamos el primer vehículo porque el nombre,
-   * correo, cédula y foto pertenecen al mismo propietario.
-   */
   const perfil =
-    useMemo(() => {
+    useMemo(
+      () => {
 
-      const primerVehiculo =
-        vehiculos[0]
+        const nombreFallback =
 
-
-      return {
-
-        nombre:
-          primerVehiculo
-            ?.propietario_nombre
-          ||
           usuario
             ?.user_metadata
             ?.full_name
+
           ||
+
           usuario
             ?.user_metadata
             ?.name
+
           ||
+
           usuario
             ?.email
             ?.split('@')[0]
+
           ||
-          'Usuario',
+
+          'Usuario'
 
 
-        correo:
-          primerVehiculo
-            ?.correo_institucional
-          ||
-          usuario?.email
-          ||
-          '',
+        const fotoFallback =
 
-
-        correoCuenta:
-          usuario?.email
-          ||
-          '',
-
-
-        cedula:
-          primerVehiculo
-            ?.cedula_enmascarada
-          ||
-          'No registrada',
-
-
-        foto:
-          primerVehiculo
-            ?.foto_propietario_url
-          ||
           usuario
             ?.user_metadata
             ?.avatar_url
+
           ||
+
           usuario
             ?.user_metadata
             ?.picture
+
           ||
-          '',
+
+          ''
 
 
-        cantidadVehiculos:
-          vehiculos.length,
+        return {
+
+          usuarioId:
+            usuario?.id ||
+            '',
 
 
-        vinculado:
-          vehiculos.length > 0,
-
-      }
-
-    }, [
-      vehiculos,
-      usuario,
-    ])
+          nombre:
+            perfilDb
+              ?.nombre
+            ||
+            nombreFallback,
 
 
-  /*
-   * =============================================================
-   * ACTUALIZAR MI PERFIL
-   * =============================================================
-   *
-   * Si un propietario posee varios vehículos,
-   * actualizamos sus datos en TODOS ellos.
-   *
-   * Esto es necesario porque actualmente el modelo
-   * guarda los datos del propietario dentro de vehiculos.
-   */
+          correo:
+            perfilDb
+              ?.correo
+            ||
+            usuario?.email
+            ||
+            '',
+
+
+          correoCuenta:
+            usuario?.email
+            ||
+            '',
+
+
+          cedula:
+            perfilDb
+              ?.cedula
+            ||
+            '',
+
+
+          cedulaEnmascarada:
+            enmascararCedula(
+              perfilDb?.cedula,
+            ),
+
+
+          foto:
+            perfilDb
+              ?.foto_url
+            ||
+            fotoFallback,
+
+
+          activo:
+            perfilDb
+              ?.activo
+            ??
+            true,
+
+
+          cantidadVehiculos:
+            vehiculos.length,
+
+
+          vinculado:
+            vehiculos.length >
+            0,
+
+
+          existe:
+            !!perfilDb,
+
+        }
+
+      },
+      [
+        perfilDb,
+        usuario,
+        vehiculos.length,
+      ],
+    )
+
+
+  /* =========================================================
+     ACTUALIZAR MI PERFIL
+     ========================================================= */
+
   const actualizarPerfil =
     useCallback(
-
       async ({
-        propietario_nombre,
-        foto_propietario_url,
+        nombre,
+        cedula,
+        foto_url,
       }) => {
 
-        if (!usuario?.id) {
-
+        if (
+          !usuario?.id
+        ) {
           return {
             ok: false,
 
             error:
               'No existe una sesión activa.',
           }
-
         }
 
 
-        if (
-          vehiculos.length === 0
-        ) {
+        const nombreLimpio =
+          String(
+            nombre ||
+            '',
+          )
+            .trim()
 
+
+        const cedulaLimpia =
+          String(
+            cedula ||
+            '',
+          )
+            .replace(
+              /\D/g,
+              '',
+            )
+
+
+        const fotoLimpia =
+          String(
+            foto_url ||
+            '',
+          )
+            .trim()
+
+
+        if (
+          !nombreLimpio
+        ) {
           return {
             ok: false,
 
             error:
-              'Tu cuenta todavía no tiene vehículos vinculados.',
+              'Ingresa tu nombre completo.',
           }
-
         }
 
 
-        const cambios = {
+        if (
+          cedulaLimpia &&
+          !/^\d{10}$/.test(
+            cedulaLimpia,
+          )
+        ) {
+          return {
+            ok: false,
 
-          propietario_nombre:
-            propietario_nombre
-              .trim()
-              .toUpperCase(),
-
-
-          foto_propietario_url:
-            foto_propietario_url
-              .trim(),
-
+            error:
+              'La cédula debe contener exactamente 10 números.',
+          }
         }
 
 
         const {
+          data,
           error:
             errorSupabase,
         } =
           await supabase
-            .from('vehiculos')
-            .update(
-              cambios,
-            )
+            .from('perfiles')
+            .update({
+              nombre:
+                nombreLimpio,
+
+              cedula:
+                cedulaLimpia ||
+                null,
+
+              foto_url:
+                fotoLimpia ||
+                null,
+            })
             .eq(
               'usuario_id',
               usuario.id,
             )
+            .select(
+              COLUMNAS_PERFIL,
+            )
+            .single()
 
 
-        if (errorSupabase) {
-
+        if (
+          errorSupabase
+        ) {
           return {
             ok: false,
 
             error:
               errorSupabase.message,
           }
-
         }
+
+
+        setPerfilDb(
+          data,
+        )
 
 
         await cargar()
@@ -390,55 +524,329 @@ export default function useMiCuenta() {
 
         return {
           ok: true,
+
+          data,
         }
 
       },
-
       [
         usuario?.id,
-        vehiculos.length,
         cargar,
       ],
-
     )
 
 
-  /*
-   * =============================================================
-   * ACTUALIZAR UNO DE MIS VEHÍCULOS
-   * =============================================================
-   */
-  const actualizarMiVehiculo =
-    useCallback(
+  /* =========================================================
+     CREAR MI VEHÍCULO
+     ========================================================= */
 
+  const crearMiVehiculo =
+    useCallback(
       async (
-        id,
-        cambios,
+        datos,
       ) => {
 
-        if (!usuario?.id) {
-
+        if (
+          !usuario?.id
+        ) {
           return {
             ok: false,
 
             error:
               'No existe una sesión activa.',
           }
+        }
+
+
+        if (
+          !perfilDb
+        ) {
+          return {
+            ok: false,
+
+            error:
+              'No se pudo encontrar tu perfil.',
+          }
+        }
+
+
+        if (
+          !perfilDb.activo
+        ) {
+          return {
+            ok: false,
+
+            error:
+              'Tu cuenta se encuentra inactiva.',
+          }
+        }
+
+
+        if (
+          !/^\d{10}$/.test(
+            String(
+              perfilDb.cedula ||
+              '',
+            ),
+          )
+        ) {
+          return {
+            ok: false,
+
+            error:
+              'Completa primero tu cédula en Mi perfil.',
+          }
+        }
+
+
+        /*
+         * NO mandamos:
+         *
+         * usuario_id
+         * propietario
+         * correo
+         * cédula
+         * autorizado
+         *
+         * El trigger SQL los asigna.
+         */
+
+        const payload = {
+
+          placa:
+            String(
+              datos.placa ||
+              '',
+            )
+              .trim()
+              .toUpperCase(),
+
+
+          marca:
+            String(
+              datos.marca ||
+              '',
+            )
+              .trim(),
+
+
+          modelo:
+            String(
+              datos.modelo ||
+              '',
+            )
+              .trim(),
+
+
+          anio:
+            Number(
+              datos.anio,
+            ),
+
+
+          color:
+            String(
+              datos.color ||
+              '',
+            )
+              .trim(),
+
+
+          tipo:
+            datos.tipo ||
+            'AUTOMOVIL',
+
+
+          foto_url:
+            String(
+              datos.foto_url ||
+              '',
+            )
+              .trim(),
+
+
+          foto_fuente_url:
+            String(
+              datos.foto_url ||
+              '',
+            )
+              .trim(),
+
+        }
+
+
+        const {
+          data,
+          error:
+            errorSupabase,
+        } =
+          await supabase
+            .from('vehiculos')
+            .insert(
+              payload,
+            )
+            .select(
+              COLUMNAS_MI_CUENTA,
+            )
+            .single()
+
+
+        if (
+          errorSupabase
+        ) {
+          return {
+            ok: false,
+
+            error:
+              errorSupabase.message,
+          }
+        }
+
+
+        setVehiculos(
+          (
+            actuales,
+          ) => [
+            ...actuales,
+            data,
+          ],
+        )
+
+
+        return {
+          ok: true,
+
+          data,
+        }
+
+      },
+      [
+        usuario?.id,
+        perfilDb,
+      ],
+    )
+
+
+  /* =========================================================
+     ACTUALIZAR MI VEHÍCULO
+     ========================================================= */
+
+  const actualizarMiVehiculo =
+    useCallback(
+      async (
+        id,
+        cambios,
+      ) => {
+
+        if (
+          !usuario?.id
+        ) {
+          return {
+            ok: false,
+
+            error:
+              'No existe una sesión activa.',
+          }
+        }
+
+
+        /*
+         * Solo enviamos campos permitidos.
+         */
+
+        const cambiosPermitidos = {
+
+          marca:
+            String(
+              cambios.marca ||
+              '',
+            )
+              .trim(),
+
+
+          modelo:
+            String(
+              cambios.modelo ||
+              '',
+            )
+              .trim(),
+
+
+          color:
+            String(
+              cambios.color ||
+              '',
+            )
+              .trim(),
+
+
+          tipo:
+            cambios.tipo ||
+            'AUTOMOVIL',
+
+
+          foto_url:
+            String(
+              cambios.foto_url ||
+              '',
+            )
+              .trim(),
 
         }
 
 
         /*
-         * El WHERE contiene:
-         *
-         * id = vehículo elegido
-         *
-         * Y
-         *
-         * usuario_id = cuenta actual
-         *
-         * Además Supabase RLS vuelve a comprobarlo.
+         * Si el modal permite editar
+         * fotografía del propietario,
+         * la enviamos al PERFIL, no solamente
+         * a un vehículo.
          */
+
+        if (
+          cambios
+            .foto_propietario_url !==
+          undefined
+        ) {
+
+          const nuevaFoto =
+            String(
+              cambios
+                .foto_propietario_url ||
+              '',
+            )
+              .trim()
+
+
+          const {
+            error:
+              errorFoto,
+          } =
+            await supabase
+              .from('perfiles')
+              .update({
+                foto_url:
+                  nuevaFoto ||
+                  null,
+              })
+              .eq(
+                'usuario_id',
+                usuario.id,
+              )
+
+
+          if (
+            errorFoto
+          ) {
+            return {
+              ok: false,
+
+              error:
+                errorFoto.message,
+            }
+          }
+
+        }
+
 
         const {
           data,
@@ -448,7 +856,7 @@ export default function useMiCuenta() {
           await supabase
             .from('vehiculos')
             .update(
-              cambios,
+              cambiosPermitidos,
             )
             .eq(
               'id',
@@ -464,34 +872,35 @@ export default function useMiCuenta() {
             .single()
 
 
-        if (errorSupabase) {
-
+        if (
+          errorSupabase
+        ) {
           return {
             ok: false,
 
             error:
               errorSupabase.message,
           }
-
         }
 
 
         setVehiculos(
           (
-            vehiculosActuales,
+            actuales,
           ) =>
-
-            vehiculosActuales.map(
+            actuales.map(
               (
                 vehiculo,
               ) =>
-
-                vehiculo.id === id
+                vehiculo.id ===
+                id
                   ? data
                   : vehiculo,
-
             ),
         )
+
+
+        await cargar()
 
 
         return {
@@ -501,11 +910,10 @@ export default function useMiCuenta() {
         }
 
       },
-
       [
         usuario?.id,
+        cargar,
       ],
-
     )
 
 
@@ -523,6 +931,8 @@ export default function useMiCuenta() {
       cargar,
 
     actualizarPerfil,
+
+    crearMiVehiculo,
 
     actualizarMiVehiculo,
 

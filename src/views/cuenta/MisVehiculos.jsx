@@ -22,15 +22,24 @@ import CIcon
 import {
   cilCarAlt,
   cilEnvelopeClosed,
+  cilPlus,
   cilReload,
   cilUser,
 } from '@coreui/icons'
+
+import {
+  useNavigate,
+} from 'react-router-dom'
 
 import useMiCuenta
   from '../../hooks/useMiCuenta'
 
 import VehiculoFormModal
   from '../../components/VehiculoFormModal'
+
+import MiVehiculoFormModal
+  from '../../components/MiVehiculoFormModal'
+
 
 export default function MisVehiculos() {
   const {
@@ -39,8 +48,14 @@ export default function MisVehiculos() {
     cargando,
     error,
     recargar,
+    crearMiVehiculo,
     actualizarMiVehiculo,
-  } = useMiCuenta()
+  } =
+    useMiCuenta()
+
+
+  const navigate =
+    useNavigate()
 
 
   const [
@@ -51,79 +66,78 @@ export default function MisVehiculos() {
 
 
   const [
+    mostrarCrear,
+    setMostrarCrear,
+  ] =
+    useState(false)
+
+
+  const [
     mensaje,
     setMensaje,
   ] =
     useState(null)
 
 
-  /*
-   * Oculta mensajes automáticamente.
-   */
-  useEffect(() => {
+  useEffect(
+    () => {
 
-    if (!mensaje) {
-      return
-    }
-
-
-    const temporizador =
-      setTimeout(() => {
-
-        setMensaje(null)
-
-      }, 4000)
-
-
-    return () =>
-      clearTimeout(
-        temporizador,
-      )
-
-  }, [
-    mensaje,
-  ])
-
-
-  /*
-   * Guardar cambios de un vehículo propio.
-   */
-  const guardar =
-    async (payload) => {
-
-      if (!seleccionado) {
-
-        return {
-          ok: false,
-
-          error:
-            'No existe un vehículo seleccionado.',
-        }
-
+      if (
+        !mensaje
+      ) {
+        return
       }
 
 
+      const temporizador =
+        setTimeout(
+          () => {
+            setMensaje(null)
+          },
+          4500,
+        )
+
+
+      return () =>
+        clearTimeout(
+          temporizador,
+        )
+
+    },
+    [
+      mensaje,
+    ],
+  )
+
+
+  /* =========================================================
+     CREAR
+     ========================================================= */
+
+  const crear =
+    async (
+      payload,
+    ) => {
+
       const resultado =
-        await actualizarMiVehiculo(
-          seleccionado.id,
+        await crearMiVehiculo(
           payload,
         )
 
 
-      if (resultado.ok) {
-
+      if (
+        resultado.ok
+      ) {
         setMensaje({
 
           tipo:
             'success',
 
           texto:
-            'Los datos de tu vehículo fueron actualizados correctamente.',
+            'Vehículo registrado correctamente. Está pendiente de autorización del administrador.',
 
         })
-
       } else {
-
         setMensaje({
 
           tipo:
@@ -133,23 +147,79 @@ export default function MisVehiculos() {
             resultado.error,
 
         })
-
       }
 
 
       return resultado
+
     }
 
 
-  /*
-   * =============================================================
-   * CARGANDO
-   * =============================================================
-   */
-  if (cargando) {
+  /* =========================================================
+     EDITAR
+     ========================================================= */
 
+  const guardar =
+    async (
+      payload,
+    ) => {
+
+      if (
+        !seleccionado
+      ) {
+        return {
+          ok: false,
+
+          error:
+            'No existe un vehículo seleccionado.',
+        }
+      }
+
+
+      const resultado =
+        await actualizarMiVehiculo(
+
+          seleccionado.id,
+
+          payload,
+
+        )
+
+
+      if (
+        resultado.ok
+      ) {
+        setMensaje({
+
+          tipo:
+            'success',
+
+          texto:
+            'Los datos de tu vehículo fueron actualizados correctamente.',
+
+        })
+      } else {
+        setMensaje({
+
+          tipo:
+            'danger',
+
+          texto:
+            resultado.error,
+
+        })
+      }
+
+
+      return resultado
+
+    }
+
+
+  if (
+    cargando
+  ) {
     return (
-
       <div className="text-center py-5">
 
         <CSpinner
@@ -157,22 +227,30 @@ export default function MisVehiculos() {
         />
 
         <p className="mt-3 text-body-secondary">
-          Buscando vehículos asociados
-          a tu cuenta...
+
+          Cargando tus vehículos...
+
         </p>
 
       </div>
-
     )
   }
+
+
+  const puedeCrear =
+    perfil.activo
+    &&
+    /^\d{10}$/.test(
+      perfil.cedula,
+    )
 
 
   return (
     <div>
 
-      {/* ========================================================
+      {/* =====================================================
           ENCABEZADO
-          ======================================================== */}
+          ===================================================== */}
 
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
 
@@ -182,40 +260,81 @@ export default function MisVehiculos() {
             MI CUENTA
           </small>
 
+
           <h2 className="mt-1 mb-1">
             Mis vehículos
           </h2>
 
+
           <p className="text-body-secondary mb-0">
-            Vehículos vinculados
-            directamente a tu cuenta
-            de Smart Parking.
+
+            Vehículos asociados
+            directamente a tu cuenta.
+
           </p>
 
         </div>
 
 
-        <CButton
-          color="success"
-          variant="outline"
-          onClick={recargar}
-        >
+        <div className="d-flex flex-wrap gap-2">
 
-          <CIcon
-            icon={cilReload}
-            className="me-2"
-          />
+          <CButton
 
-          Actualizar
+            color="success"
 
-        </CButton>
+            onClick={() =>
+              setMostrarCrear(
+                true,
+              )
+            }
+
+            disabled={
+              !puedeCrear
+            }
+          >
+
+            <CIcon
+              icon={
+                cilPlus
+              }
+              className="me-2"
+            />
+
+            Agregar vehículo
+
+          </CButton>
+
+
+          <CButton
+
+            color="success"
+
+            variant="outline"
+
+            onClick={
+              recargar
+            }
+          >
+
+            <CIcon
+              icon={
+                cilReload
+              }
+              className="me-2"
+            />
+
+            Actualizar
+
+          </CButton>
+
+        </div>
 
       </div>
 
 
-      {/* ========================================================
+      {/* =====================================================
           ERROR
-          ======================================================== */}
+          ===================================================== */}
 
       {error && (
 
@@ -234,24 +353,71 @@ export default function MisVehiculos() {
       )}
 
 
-      {/* ========================================================
+      {/* =====================================================
           MENSAJES
-          ======================================================== */}
+          ===================================================== */}
 
       {mensaje && (
 
         <CAlert
-          color={mensaje.tipo}
+          color={
+            mensaje.tipo
+          }
         >
-          {mensaje.texto}
+          {
+            mensaje.texto
+          }
         </CAlert>
 
       )}
 
 
-      {/* ========================================================
-          RESUMEN DE LA CUENTA
-          ======================================================== */}
+      {/* =====================================================
+          PERFIL INCOMPLETO
+          ===================================================== */}
+
+      {!perfil.cedula && (
+
+        <CAlert color="warning">
+
+          <strong>
+            Antes de registrar un vehículo
+            debes completar tu perfil.
+          </strong>
+
+          <br />
+
+          Registra tu cédula y verifica
+          tus datos personales.
+
+
+          <div className="mt-3">
+
+            <CButton
+
+              color="warning"
+
+              size="sm"
+
+              onClick={() =>
+                navigate(
+                  '/cuenta/perfil',
+                )
+              }
+            >
+              Completar mi perfil
+            </CButton>
+
+          </div>
+
+        </CAlert>
+
+      )}
+
+
+      {/* =====================================================
+          RESUMEN CUENTA
+          ===================================================== */}
 
       <CCard className="shadow-sm mb-4">
 
@@ -269,13 +435,17 @@ export default function MisVehiculos() {
 
                 <CAvatar
 
-                  src={perfil.foto}
+                  src={
+                    perfil.foto
+                  }
 
                   style={{
-                    width: 95,
-                    height: 95,
-                  }}
+                    width:
+                      95,
 
+                    height:
+                      95,
+                  }}
                 />
 
               ) : (
@@ -287,18 +457,24 @@ export default function MisVehiculos() {
                   textColor="white"
 
                   style={{
-                    width: 95,
-                    height: 95,
-                    fontSize: 30,
-                  }}
+                    width:
+                      95,
 
+                    height:
+                      95,
+
+                    fontSize:
+                      30,
+                  }}
                 >
 
-                  {perfil.nombre
-                    ?.charAt(0)
-                    ?.toUpperCase()
+                  {
+                    perfil.nombre
+                      ?.charAt(0)
+                      ?.toUpperCase()
                     ||
-                    'U'}
+                    'U'
+                  }
 
                 </CAvatar>
 
@@ -312,21 +488,27 @@ export default function MisVehiculos() {
               <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
 
                 <h4 className="mb-0">
-                  {perfil.nombre}
+
+                  {
+                    perfil.nombre
+                  }
+
                 </h4>
 
 
                 <CBadge
                   color={
-                    perfil.vinculado
+                    perfil.activo
                       ? 'success'
-                      : 'secondary'
+                      : 'danger'
                   }
                 >
 
-                  {perfil.vinculado
-                    ? 'Cuenta vinculada'
-                    : 'Sin vehículo vinculado'}
+                  {
+                    perfil.activo
+                      ? 'Cuenta activa'
+                      : 'Cuenta inactiva'
+                  }
 
                 </CBadge>
 
@@ -336,56 +518,60 @@ export default function MisVehiculos() {
               <div className="text-body-secondary mb-2">
 
                 <CIcon
-                  icon={cilEnvelopeClosed}
+                  icon={
+                    cilEnvelopeClosed
+                  }
                   className="me-2"
                 />
 
-                Cuenta de acceso:
-
-                {' '}
+                Cuenta de acceso:{' '}
 
                 <strong>
-                  {perfil.correoCuenta}
+                  {
+                    perfil
+                      .correoCuenta
+                  }
                 </strong>
 
               </div>
 
 
-              {perfil.correo && (
+              <div className="text-body-secondary mb-2">
 
-                <div className="text-body-secondary mb-2">
+                <CIcon
+                  icon={
+                    cilUser
+                  }
+                  className="me-2"
+                />
 
-                  <CIcon
-                    icon={cilUser}
-                    className="me-2"
-                  />
+                Propietario:{' '}
 
-                  Correo institucional:
+                <strong>
+                  {
+                    perfil.nombre
+                  }
+                </strong>
 
-                  {' '}
-
-                  <strong>
-                    {perfil.correo}
-                  </strong>
-
-                </div>
-
-              )}
+              </div>
 
 
               <div className="text-body-secondary">
 
                 <CIcon
-                  icon={cilCarAlt}
+                  icon={
+                    cilCarAlt
+                  }
                   className="me-2"
                 />
 
-                Vehículos asociados:
-
-                {' '}
+                Vehículos asociados:{' '}
 
                 <strong>
-                  {perfil.cantidadVehiculos}
+                  {
+                    perfil
+                      .cantidadVehiculos
+                  }
                 </strong>
 
               </div>
@@ -399,54 +585,60 @@ export default function MisVehiculos() {
       </CCard>
 
 
-      {/* ========================================================
+      {/* =====================================================
           SIN VEHÍCULOS
-          ======================================================== */}
+          ===================================================== */}
 
       {!error &&
-        vehiculos.length === 0 && (
+        vehiculos.length ===
+          0 && (
 
-          <CAlert color="info">
+        <CAlert color="info">
 
-            <h5>
-              No encontramos vehículos
-              vinculados a tu cuenta.
-            </h5>
-
-
-            <p className="mb-2">
-
-              El sistema intenta relacionar
-              automáticamente tu cuenta con
-              los registros existentes mediante
-              tu correo institucional o correo
-              Microsoft.
-
-            </p>
+          <h5>
+            Todavía no tienes vehículos registrados.
+          </h5>
 
 
-            <p className="mb-0">
+          <p className="mb-2">
 
-              Cuenta actualmente iniciada:
+            Puedes registrar tu primer
+            automóvil desde el botón{' '}
 
-              {' '}
+            <strong>
+              Agregar vehículo
+            </strong>
 
-              <strong>
-                {perfil.correoCuenta}
-              </strong>
+            .
 
-            </p>
-
-          </CAlert>
-
-        )}
+          </p>
 
 
-      {/* ========================================================
+          <p className="mb-0">
+
+            Cuando lo registres aparecerá
+            como{' '}
+
+            <strong>
+              Pendiente de autorización
+            </strong>
+
+            {' '}hasta que un administrador
+            lo apruebe.
+
+          </p>
+
+        </CAlert>
+
+      )}
+
+
+      {/* =====================================================
           VEHÍCULOS
-          ======================================================== */}
+          ===================================================== */}
 
-      {vehiculos.length > 0 && (
+      {vehiculos.length >
+        0 && (
 
         <CRow className="g-4">
 
@@ -459,7 +651,9 @@ export default function MisVehiculos() {
                 xs={12}
                 md={6}
                 xl={4}
-                key={vehiculo.id}
+                key={
+                  vehiculo.id
+                }
               >
 
                 <CCard className="h-100 shadow-sm overflow-hidden">
@@ -468,39 +662,55 @@ export default function MisVehiculos() {
 
                   <div
                     style={{
-                      height: 220,
+                      height:
+                        220,
+
                       background:
                         '#f3f4f6',
                     }}
                   >
 
-                    <img
+                    {vehiculo.foto_url ? (
 
-                      src={
-                        vehiculo.foto_url
-                      }
+                      <img
 
-                      alt={`${vehiculo.marca} ${vehiculo.modelo}`}
+                        src={
+                          vehiculo
+                            .foto_url
+                        }
 
-                      loading="lazy"
+                        alt={
+                          `${vehiculo.marca} ${vehiculo.modelo}`
+                        }
 
-                      style={{
-                        height:
-                          '100%',
+                        loading="lazy"
 
-                        width:
-                          '100%',
+                        style={{
+                          height:
+                            '100%',
 
-                        objectFit:
-                          'cover',
-                      }}
+                          width:
+                            '100%',
 
-                    />
+                          objectFit:
+                            'cover',
+                        }}
+                      />
+
+                    ) : (
+
+                      <div
+                        className="h-100 d-flex align-items-center justify-content-center text-body-secondary"
+                      >
+                        Sin fotografía
+                      </div>
+
+                    )}
 
                   </div>
 
 
-                  {/* CABECERA */}
+                  {/* HEADER */}
 
                   <CCardHeader>
 
@@ -510,18 +720,24 @@ export default function MisVehiculos() {
 
                         <h5 className="mb-1">
 
-                          {vehiculo.marca}
+                          {
+                            vehiculo.marca
+                          }
 
                           {' '}
 
-                          {vehiculo.modelo}
+                          {
+                            vehiculo.modelo
+                          }
 
                         </h5>
 
 
                         <CBadge color="dark">
 
-                          {vehiculo.placa}
+                          {
+                            vehiculo.placa
+                          }
 
                         </CBadge>
 
@@ -532,13 +748,21 @@ export default function MisVehiculos() {
                         color={
                           vehiculo.autorizado
                             ? 'success'
-                            : 'danger'
+                            : 'warning'
+                        }
+
+                        textColor={
+                          vehiculo.autorizado
+                            ? undefined
+                            : 'dark'
                         }
                       >
 
-                        {vehiculo.autorizado
-                          ? 'Autorizado'
-                          : 'No autorizado'}
+                        {
+                          vehiculo.autorizado
+                            ? 'Autorizado'
+                            : 'Pendiente'
+                        }
 
                       </CBadge>
 
@@ -547,28 +771,9 @@ export default function MisVehiculos() {
                   </CCardHeader>
 
 
-                  {/* DATOS */}
-
                   <CCardBody className="d-flex flex-column">
 
                     <div className="mb-3">
-
-                      <div className="mb-2">
-
-                        <span className="text-body-secondary">
-                          Propietario
-                        </span>
-
-                        <div className="fw-semibold">
-
-                          {
-                            vehiculo.propietario_nombre
-                          }
-
-                        </div>
-
-                      </div>
-
 
                       <div className="mb-2">
 
@@ -577,11 +782,9 @@ export default function MisVehiculos() {
                         </span>
 
                         <div className="fw-semibold">
-
                           {
                             vehiculo.anio
                           }
-
                         </div>
 
                       </div>
@@ -594,11 +797,9 @@ export default function MisVehiculos() {
                         </span>
 
                         <div className="fw-semibold">
-
                           {
                             vehiculo.color
                           }
-
                         </div>
 
                       </div>
@@ -611,11 +812,9 @@ export default function MisVehiculos() {
                         </span>
 
                         <div className="fw-semibold">
-
                           {
                             vehiculo.tipo
                           }
-
                         </div>
 
                       </div>
@@ -624,13 +823,15 @@ export default function MisVehiculos() {
                       <div>
 
                         <span className="text-body-secondary">
-                          Cédula
+                          Estado
                         </span>
 
                         <div className="fw-semibold">
 
                           {
-                            vehiculo.cedula_enmascarada
+                            vehiculo.autorizado
+                              ? 'Habilitado para el parqueadero'
+                              : 'Esperando aprobación del administrador'
                           }
 
                         </div>
@@ -653,7 +854,6 @@ export default function MisVehiculos() {
                             vehiculo,
                           )
                         }
-
                       >
 
                         Editar mi vehículo
@@ -669,7 +869,6 @@ export default function MisVehiculos() {
               </CCol>
 
             ),
-
           )}
 
         </CRow>
@@ -677,9 +876,32 @@ export default function MisVehiculos() {
       )}
 
 
-      {/* ========================================================
-          MODAL
-          ======================================================== */}
+      {/* =====================================================
+          CREAR
+          ===================================================== */}
+
+      <MiVehiculoFormModal
+
+        visible={
+          mostrarCrear
+        }
+
+        onClose={() =>
+          setMostrarCrear(
+            false,
+          )
+        }
+
+        onGuardar={
+          crear
+        }
+
+      />
+
+
+      {/* =====================================================
+          EDITAR
+          ===================================================== */}
 
       <VehiculoFormModal
 

@@ -21,141 +21,123 @@ import {
 } from '@coreui/react'
 
 import {
-  useVehiculos,
-} from '../../hooks/useVehiculos'
-
-import {
   useAuth,
 } from '../../context/AuthContext'
 
+import usePerfiles
+  from '../../hooks/usePerfiles'
 
-/* ================================================================
-   FOTO DEL PROPIETARIO
-   ================================================================ */
 
-function FotoPropietario({
-  propietario,
+function FotoPerfil({
+  perfil,
 }) {
   const [
-    errorImagen,
-    setErrorImagen,
+    fallo,
+    setFallo,
   ] =
     useState(false)
 
 
-  const iniciales =
-    String(
-      propietario.nombre ||
-      'Usuario',
-    )
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map(
-        (
-          palabra,
-        ) =>
-          palabra[0]
-            ?.toUpperCase(),
-      )
-      .join('')
-
-
   if (
-    !propietario.foto ||
-    errorImagen
+    perfil.foto_url &&
+    !fallo
   ) {
     return (
-      <div
+      <img
+
+        src={
+          perfil.foto_url
+        }
+
+        alt={
+          perfil.nombre
+        }
+
+        onError={() =>
+          setFallo(
+            true,
+          )
+        }
+
         style={{
-          width: 52,
-          height: 52,
+          width:
+            48,
 
-          display: 'grid',
-          placeItems: 'center',
+          height:
+            48,
 
-          borderRadius: '50%',
+          objectFit:
+            'cover',
 
-          background:
-            '#e8f5ed',
-
-          color:
-            '#087b26',
+          borderRadius:
+            '50%',
 
           border:
-            '2px solid #cde8d6',
-
-          fontWeight: 800,
-
-          fontSize: 14,
+            '2px solid #d1e7dd',
         }}
-      >
-        {
-          iniciales ||
-          'U'
-        }
-      </div>
+
+      />
     )
   }
 
 
   return (
-    <img
-      src={
-        propietario.foto
-      }
-
-      alt={
-        propietario.nombre ||
-        'Propietario'
-      }
-
-      onError={() =>
-        setErrorImagen(
-          true,
-        )
-      }
-
+    <div
       style={{
-        width: 52,
-        height: 52,
+        width:
+          48,
 
-        objectFit:
-          'cover',
+        height:
+          48,
+
+        display:
+          'grid',
+
+        placeItems:
+          'center',
 
         borderRadius:
           '50%',
 
-        border:
-          '2px solid #d1e7dd',
+        background:
+          '#e8f5ed',
 
-        boxShadow:
-          '0 3px 9px rgba(15,23,42,.09)',
+        color:
+          '#087b26',
+
+        fontWeight:
+          800,
       }}
-    />
+    >
+
+      {
+        perfil.nombre
+          ?.charAt(0)
+          ?.toUpperCase()
+        ||
+        'U'
+      }
+
+    </div>
   )
 }
 
 
-/* ================================================================
-   COMPONENTE
-   ================================================================ */
-
 export default function Propietarios() {
-  const {
-    vehiculos,
-    cargando,
-    error,
-    recargar,
-  } =
-    useVehiculos()
-
-
   const {
     puedeAdministrar,
   } =
     useAuth()
+
+
+  const {
+    perfiles,
+    cargando,
+    error,
+    recargar,
+    cambiarActivo,
+  } =
+    usePerfiles()
 
 
   const [
@@ -165,255 +147,158 @@ export default function Propietarios() {
     useState('')
 
 
-  /* ==============================================================
-     AGRUPAR VEHÍCULOS POR PROPIETARIO
-     ============================================================== */
-
-  const propietarios =
-    useMemo(() => {
-
-      const mapa =
-        new Map()
+  const [
+    mensaje,
+    setMensaje,
+  ] =
+    useState(null)
 
 
-      /*
-       * En vista administrador:
-       * muestra todos.
-       *
-       * En vista usuario:
-       * conservamos únicamente
-       * registros autorizados.
-       */
+  const filtrados =
+    useMemo(
+      () => {
 
-      const fuente =
-        puedeAdministrar
-          ? vehiculos
-          : vehiculos.filter(
-              (
-                vehiculo,
-              ) =>
-                vehiculo.autorizado,
-            )
+        const texto =
+          busqueda
+            .trim()
+            .toLowerCase()
 
 
-      fuente.forEach(
-        (
-          vehiculo,
-        ) => {
-
-          /*
-           * Idealmente agrupamos por correo,
-           * porque suele ser único.
-           */
-
-          const llave =
-            vehiculo
-              .correo_institucional
-            ||
-            vehiculo
-              .propietario_nombre
-            ||
-            String(
-              vehiculo.id,
-            )
+        if (
+          !texto
+        ) {
+          return perfiles
+        }
 
 
-          if (
-            !mapa.has(
-              llave,
-            )
-          ) {
-
-            mapa.set(
-              llave,
-              {
-                id:
-                  llave,
-
-                nombre:
-                  vehiculo
-                    .propietario_nombre
-                  ||
-                  'Sin nombre',
-
-                correo:
-                  vehiculo
-                    .correo_institucional
-                  ||
-                  '',
-
-                cedula:
-                  vehiculo
-                    .cedula_enmascarada
-                  ||
-                  '',
-
-                foto:
-                  vehiculo
-                    .foto_propietario_url
-                  ||
-                  '',
-
-                vehiculos:
-                  [],
-              },
-            )
-
-          }
-
-
-          mapa
-            .get(llave)
-            .vehiculos
-            .push(
-              vehiculo,
-            )
-
-        },
-      )
-
-
-      return Array.from(
-        mapa.values(),
-      )
-        .sort(
+        return perfiles.filter(
           (
-            a,
-            b,
-          ) =>
-            a.nombre
-              .localeCompare(
-                b.nombre,
-                'es',
-                {
-                  sensitivity:
-                    'base',
-                },
-              ),
+            perfil,
+          ) => {
+
+            const placas =
+              perfil
+                .vehiculos
+                .map(
+                  (
+                    vehiculo,
+                  ) =>
+                    vehiculo.placa,
+                )
+                .join(' ')
+
+
+            return [
+              perfil.nombre,
+              perfil.correo,
+              perfil.cedula,
+              placas,
+            ]
+              .map(
+                (
+                  valor,
+                ) =>
+                  String(
+                    valor ||
+                    '',
+                  )
+                    .toLowerCase(),
+              )
+              .some(
+                (
+                  valor,
+                ) =>
+                  valor.includes(
+                    texto,
+                  ),
+              )
+
+          },
         )
 
-    }, [
-      vehiculos,
-      puedeAdministrar,
-    ])
-
-
-  /* ==============================================================
-     BÚSQUEDA
-     ============================================================== */
-
-  const propietariosFiltrados =
-    useMemo(() => {
-      const texto =
-        busqueda
-          .trim()
-          .toLowerCase()
-
-
-      if (!texto) {
-        return propietarios
-      }
-
-
-      return propietarios.filter(
-        (
-          propietario,
-        ) => {
-
-          const placas =
-            propietario
-              .vehiculos
-              .map(
-                (
-                  vehiculo,
-                ) =>
-                  vehiculo.placa,
-              )
-              .join(' ')
-
-
-          const vehiculosTexto =
-            propietario
-              .vehiculos
-              .map(
-                (
-                  vehiculo,
-                ) =>
-                  `${vehiculo.marca} ${vehiculo.modelo}`,
-              )
-              .join(' ')
-
-
-          return [
-            propietario.nombre,
-            propietario.correo,
-            propietario.cedula,
-            placas,
-            vehiculosTexto,
-          ]
-            .map(
-              (
-                valor,
-              ) =>
-                String(
-                  valor ??
-                  '',
-                )
-                  .toLowerCase(),
-            )
-            .some(
-              (
-                valor,
-              ) =>
-                valor.includes(
-                  texto,
-                ),
-            )
-
-        },
-      )
-    }, [
-      propietarios,
-      busqueda,
-    ])
-
-
-  /* ==============================================================
-     ESTADÍSTICAS
-     ============================================================== */
-
-  const totalVehiculos =
-    propietarios.reduce(
-      (
-        acumulado,
-        propietario,
-      ) =>
-        acumulado +
-        propietario
-          .vehiculos
-          .length,
-      0,
+      },
+      [
+        perfiles,
+        busqueda,
+      ],
     )
 
 
-  const propietariosConVarios =
-    propietarios.filter(
-      (
-        propietario,
-      ) =>
-        propietario
-          .vehiculos
-          .length >
-        1,
-    ).length
+  const cambiarEstado =
+    async (
+      perfil,
+    ) => {
+
+      setMensaje(null)
+
+
+      const resultado =
+        await cambiarActivo(
+
+          perfil.usuario_id,
+
+          !perfil.activo,
+
+        )
+
+
+      if (
+        resultado.ok
+      ) {
+        setMensaje({
+
+          tipo:
+            'success',
+
+          texto:
+            perfil.activo
+              ? 'Cuenta desactivada.'
+              : 'Cuenta activada.',
+
+        })
+      } else {
+        setMensaje({
+
+          tipo:
+            'danger',
+
+          texto:
+            resultado.error,
+
+        })
+      }
+
+    }
+
+
+  if (
+    !puedeAdministrar
+  ) {
+    return (
+      <CAlert color="info">
+
+        <strong>
+          Vista de propietarios.
+        </strong>
+
+        <br />
+
+        La administración completa
+        de cuentas está disponible
+        únicamente en la Vista
+        administrador.
+
+        Los usuarios normales pueden
+        consultar los propietarios
+        asociados desde Vehículos.
+
+      </CAlert>
+    )
+  }
 
 
   return (
     <CCard className="shadow-sm border-0">
-
-      {/* ========================================================
-          HEADER
-          ======================================================== */}
 
       <CCardHeader
         className="d-flex flex-wrap justify-content-between align-items-center gap-3"
@@ -421,37 +306,15 @@ export default function Propietarios() {
 
         <div>
 
-          <div
-            className="d-flex align-items-center gap-2"
-          >
-
-            <strong
-              style={{
-                fontSize: 16,
-              }}
-            >
-              Propietarios
-            </strong>
-
-
-            <CBadge color="info">
-
-              {
-                propietarios.length
-              }
-
-              {' '}registrados
-
-            </CBadge>
-
-          </div>
+          <strong>
+            Propietarios y cuentas
+          </strong>
 
 
           <div className="small text-body-secondary mt-1">
 
-            Personas asociadas a los
-            vehículos registrados en
-            Smart Parking UTEQ.
+            Todas las cuentas registradas,
+            tengan o no vehículos asociados.
 
           </div>
 
@@ -459,7 +322,9 @@ export default function Propietarios() {
 
 
         <CButton
+
           color="success"
+
           variant="outline"
 
           disabled={
@@ -470,7 +335,9 @@ export default function Propietarios() {
             recargar
           }
         >
+
           Actualizar
+
         </CButton>
 
       </CCardHeader>
@@ -478,65 +345,61 @@ export default function Propietarios() {
 
       <CCardBody>
 
-        {/* ========================================================
-            ESTADÍSTICAS
-            ======================================================== */}
+        {mensaje && (
+
+          <CAlert
+            color={
+              mensaje.tipo
+            }
+          >
+            {
+              mensaje.texto
+            }
+          </CAlert>
+
+        )}
+
+
+        {/* ===================================================
+            RESUMEN
+            =================================================== */}
 
         <div
           style={{
-            display: 'grid',
+            display:
+              'grid',
 
             gridTemplateColumns:
-              'repeat(auto-fit, minmax(180px, 1fr))',
+              'repeat(auto-fit,minmax(180px,1fr))',
 
-            gap: 12,
+            gap:
+              12,
 
-            marginBottom: 20,
+            marginBottom:
+              20,
           }}
         >
 
-          {/* PROPIETARIOS */}
-
-          <div
-            style={{
-              padding: 15,
-
-              border:
-                '1px solid #e5e7eb',
-
-              borderRadius:
-                12,
-
-              background:
-                '#ffffff',
-            }}
-          >
+          <div className="border rounded p-3">
 
             <small className="text-body-secondary">
-              Propietarios
+              Cuentas registradas
             </small>
-
 
             <div className="fs-3 fw-bold">
               {
-                propietarios.length
+                perfiles.length
               }
             </div>
 
           </div>
 
 
-          {/* VEHÍCULOS */}
-
           <div
+            className="rounded p-3"
             style={{
-              padding: 15,
-
               border:
                 '1px solid #bbf7d0',
-
-              borderRadius:
-                12,
 
               background:
                 '#ecfdf5',
@@ -549,37 +412,38 @@ export default function Propietarios() {
                   '#166534',
               }}
             >
-              Vehículos asociados
+              Con vehículo
             </small>
-
 
             <div
               className="fs-3 fw-bold"
-
               style={{
                 color:
                   '#166534',
               }}
             >
+
               {
-                totalVehiculos
+                perfiles.filter(
+                  (
+                    perfil,
+                  ) =>
+                    perfil
+                      .cantidadVehiculos >
+                    0,
+                ).length
               }
+
             </div>
 
           </div>
 
 
-          {/* MÁS DE UNO */}
-
           <div
+            className="rounded p-3"
             style={{
-              padding: 15,
-
               border:
                 '1px solid #bfdbfe',
-
-              borderRadius:
-                12,
 
               background:
                 '#eff6ff',
@@ -592,21 +456,73 @@ export default function Propietarios() {
                   '#1d4ed8',
               }}
             >
-              Con varios vehículos
+              Sin vehículos
             </small>
-
 
             <div
               className="fs-3 fw-bold"
-
               style={{
                 color:
                   '#1d4ed8',
               }}
             >
+
               {
-                propietariosConVarios
+                perfiles.filter(
+                  (
+                    perfil,
+                  ) =>
+                    perfil
+                      .cantidadVehiculos ===
+                    0,
+                ).length
               }
+
+            </div>
+
+          </div>
+
+
+          <div
+            className="rounded p-3"
+            style={{
+              border:
+                '1px solid #fed7aa',
+
+              background:
+                '#fff7ed',
+            }}
+          >
+
+            <small
+              style={{
+                color:
+                  '#9a3412',
+              }}
+            >
+              Vehículos pendientes
+            </small>
+
+            <div
+              className="fs-3 fw-bold"
+              style={{
+                color:
+                  '#9a3412',
+              }}
+            >
+
+              {
+                perfiles.reduce(
+                  (
+                    total,
+                    perfil,
+                  ) =>
+                    total +
+                    perfil.pendientes,
+                  0,
+                )
+              }
+
             </div>
 
           </div>
@@ -614,18 +530,17 @@ export default function Propietarios() {
         </div>
 
 
-        {/* ========================================================
+        {/* ===================================================
             BUSCADOR
-            ======================================================== */}
+            =================================================== */}
 
-        <div
-          className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3"
-        >
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
 
           <CFormInput
+
             type="search"
 
-            placeholder="Buscar propietario, correo, cédula, placa o vehículo..."
+            placeholder="Buscar nombre, correo, cédula o placa..."
 
             value={
               busqueda
@@ -635,42 +550,32 @@ export default function Propietarios() {
               evento,
             ) =>
               setBusqueda(
-                evento.target.value,
+                evento
+                  .target
+                  .value,
               )
             }
 
             style={{
-              maxWidth: 480,
+              maxWidth:
+                450,
             }}
+
           />
 
 
-          <span className="text-body-secondary small">
+          <span className="text-body-secondary">
 
-            Mostrando{' '}
+            {
+              filtrados.length
+            }
 
-            <strong>
-              {
-                propietariosFiltrados.length
-              }
-            </strong>
-
-            {' '}de{' '}
-
-            <strong>
-              {
-                propietarios.length
-              }
-            </strong>
+            {' '}cuentas
 
           </span>
 
         </div>
 
-
-        {/* ========================================================
-            CARGANDO
-            ======================================================== */}
 
         {cargando && (
 
@@ -680,17 +585,8 @@ export default function Propietarios() {
               color="success"
             />
 
-
-            <h5 className="mt-3">
-              Cargando propietarios...
-            </h5>
-
-
-            <p className="text-body-secondary">
-
-              Consultando vehículos
-              registrados en Supabase.
-
+            <p className="mt-3">
+              Cargando cuentas...
             </p>
 
           </div>
@@ -698,311 +594,287 @@ export default function Propietarios() {
         )}
 
 
-        {/* ========================================================
-            ERROR
-            ======================================================== */}
+        {error && (
 
-        {!cargando &&
-          error && (
+          <CAlert color="danger">
+            {error}
+          </CAlert>
 
-            <CAlert color="danger">
+        )}
 
-              <strong>
-                No se pudieron cargar
-                los propietarios.
-              </strong>
-
-              <br />
-
-              {error}
-
-            </CAlert>
-
-          )}
-
-
-        {/* ========================================================
-            TABLA
-            ======================================================== */}
 
         {!cargando &&
           !error && (
 
-            <CTable
-              responsive
-              hover
-              bordered
-              align="middle"
-            >
+          <CTable
+            responsive
+            hover
+            bordered
+            align="middle"
+          >
 
-              <CTableHead color="light">
+            <CTableHead color="light">
 
-                <CTableRow>
+              <CTableRow>
 
-                  <CTableHeaderCell
-                    style={{
-                      width: 80,
-                    }}
+                <CTableHeaderCell>
+                  Foto
+                </CTableHeaderCell>
+
+                <CTableHeaderCell>
+                  Propietario
+                </CTableHeaderCell>
+
+                <CTableHeaderCell>
+                  Correo
+                </CTableHeaderCell>
+
+                <CTableHeaderCell>
+                  Cédula
+                </CTableHeaderCell>
+
+                <CTableHeaderCell>
+                  Vehículos
+                </CTableHeaderCell>
+
+                <CTableHeaderCell>
+                  Placas
+                </CTableHeaderCell>
+
+                <CTableHeaderCell>
+                  Pendientes
+                </CTableHeaderCell>
+
+                <CTableHeaderCell>
+                  Cuenta
+                </CTableHeaderCell>
+
+                <CTableHeaderCell>
+                  Acción
+                </CTableHeaderCell>
+
+              </CTableRow>
+
+            </CTableHead>
+
+
+            <CTableBody>
+
+              {filtrados.map(
+                (
+                  perfil,
+                ) => (
+
+                  <CTableRow
+                    key={
+                      perfil.usuario_id
+                    }
                   >
-                    Foto
-                  </CTableHeaderCell>
+
+                    <CTableDataCell>
+
+                      <FotoPerfil
+                        perfil={
+                          perfil
+                        }
+                      />
+
+                    </CTableDataCell>
 
 
-                  <CTableHeaderCell>
-                    Propietario
-                  </CTableHeaderCell>
+                    <CTableDataCell>
+
+                      <strong>
+                        {
+                          perfil.nombre
+                        }
+                      </strong>
 
 
-                  <CTableHeaderCell>
-                    Cédula
-                  </CTableHeaderCell>
+                      {perfil
+                        .cantidadVehiculos ===
+                        0 && (
+
+                        <div>
+
+                          <CBadge
+                            color="secondary"
+                            className="mt-1"
+                          >
+                            Sin vehículos
+                          </CBadge>
+
+                        </div>
+
+                      )}
+
+                    </CTableDataCell>
 
 
-                  <CTableHeaderCell>
-                    Correo
-                  </CTableHeaderCell>
+                    <CTableDataCell>
+
+                      <a
+                        href={
+                          `mailto:${perfil.correo}`
+                        }
+                      >
+                        {
+                          perfil.correo
+                        }
+                      </a>
+
+                    </CTableDataCell>
 
 
-                  <CTableHeaderCell>
-                    Vehículos
-                  </CTableHeaderCell>
+                    <CTableDataCell>
+
+                      {
+                        perfil
+                          .cedula_enmascarada
+                      }
+
+                    </CTableDataCell>
 
 
-                  <CTableHeaderCell>
-                    Placas
-                  </CTableHeaderCell>
+                    <CTableDataCell>
+
+                      <CBadge color="info">
+
+                        {
+                          perfil
+                            .cantidadVehiculos
+                        }
+
+                      </CBadge>
+
+                    </CTableDataCell>
 
 
-                  <CTableHeaderCell>
-                    Estado
-                  </CTableHeaderCell>
+                    <CTableDataCell>
 
-                </CTableRow>
+                      <div className="d-flex flex-wrap gap-1">
 
-              </CTableHead>
+                        {
+                          perfil.vehiculos.map(
+                            (
+                              vehiculo,
+                            ) => (
+
+                              <CBadge
+                                color="dark"
+                                key={
+                                  vehiculo.id
+                                }
+                              >
+                                {
+                                  vehiculo.placa
+                                }
+                              </CBadge>
+
+                            ),
+                          )
+                        }
 
 
-              <CTableBody>
+                        {perfil
+                          .vehiculos
+                          .length ===
+                          0 && (
+                          '—'
+                        )}
 
-                {propietariosFiltrados.map(
-                  (
-                    propietario,
-                  ) => {
+                      </div>
 
-                    const todosAutorizados =
-                      propietario
-                        .vehiculos
-                        .every(
-                          (
-                            vehiculo,
-                          ) =>
-                            vehiculo.autorizado,
-                        )
+                    </CTableDataCell>
 
 
-                    return (
-                      <CTableRow
-                        key={
-                          propietario.id
+                    <CTableDataCell>
+
+                      {perfil.pendientes >
+                        0 ? (
+
+                        <CBadge
+                          color="warning"
+                          textColor="dark"
+                        >
+                          {
+                            perfil.pendientes
+                          }
+                        </CBadge>
+
+                      ) : (
+
+                        <span className="text-body-secondary">
+                          0
+                        </span>
+
+                      )}
+
+                    </CTableDataCell>
+
+
+                    <CTableDataCell>
+
+                      <CBadge
+                        color={
+                          perfil.activo
+                            ? 'success'
+                            : 'danger'
                         }
                       >
 
-                        {/* FOTO */}
+                        {
+                          perfil.activo
+                            ? 'Activo'
+                            : 'Inactivo'
+                        }
 
-                        <CTableDataCell>
+                      </CBadge>
 
-                          <FotoPropietario
-                            propietario={
-                              propietario
-                            }
-                          />
-
-                        </CTableDataCell>
+                    </CTableDataCell>
 
 
-                        {/* NOMBRE */}
+                    <CTableDataCell>
 
-                        <CTableDataCell>
+                      <CButton
 
-                          <strong>
-                            {
-                              propietario
-                                .nombre
-                            }
-                          </strong>
+                        size="sm"
 
+                        color={
+                          perfil.activo
+                            ? 'danger'
+                            : 'success'
+                        }
 
-                          <div className="small text-body-secondary">
+                        variant="outline"
 
-                            Propietario
+                        onClick={() =>
+                          cambiarEstado(
+                            perfil,
+                          )
+                        }
+                      >
 
-                          </div>
+                        {
+                          perfil.activo
+                            ? 'Desactivar'
+                            : 'Activar'
+                        }
 
-                        </CTableDataCell>
-
-
-                        {/* CÉDULA */}
-
-                        <CTableDataCell>
-
-                          {
-                            propietario
-                              .cedula
-                            ||
-                            '—'
-                          }
-
-                        </CTableDataCell>
-
-
-                        {/* CORREO */}
-
-                        <CTableDataCell>
-
-                          {propietario.correo ? (
-
-                            <a
-                              href={
-                                `mailto:${propietario.correo}`
-                              }
-
-                              style={{
-                                color:
-                                  '#087b26',
-
-                                textDecoration:
-                                  'none',
-                              }}
-                            >
-                              {
-                                propietario
-                                  .correo
-                              }
-                            </a>
-
-                          ) : (
-
-                            '—'
-
-                          )}
-
-                        </CTableDataCell>
-
-
-                        {/* CANTIDAD VEHÍCULOS */}
-
-                        <CTableDataCell>
-
-                          <CBadge color="info">
-
-                            {
-                              propietario
-                                .vehiculos
-                                .length
-                            }
-
-                          </CBadge>
-
-                        </CTableDataCell>
-
-
-                        {/* PLACAS */}
-
-                        <CTableDataCell>
-
-                          <div
-                            className="d-flex flex-wrap gap-1"
-                          >
-
-                            {
-                              propietario
-                                .vehiculos
-                                .map(
-                                  (
-                                    vehiculo,
-                                  ) => (
-
-                                    <CBadge
-                                      key={
-                                        vehiculo.id
-                                      }
-
-                                      color="dark"
-                                    >
-                                      {
-                                        vehiculo
-                                          .placa
-                                      }
-                                    </CBadge>
-
-                                  ),
-                                )
-                            }
-
-                          </div>
-
-                        </CTableDataCell>
-
-
-                        {/* AUTORIZACIÓN */}
-
-                        <CTableDataCell>
-
-                          <CBadge
-                            color={
-                              todosAutorizados
-                                ? 'success'
-                                : 'warning'
-                            }
-
-                            textColor={
-                              todosAutorizados
-                                ? undefined
-                                : 'dark'
-                            }
-                          >
-
-                            {
-                              todosAutorizados
-                                ? 'Autorizado'
-                                : 'Revisar'
-                            }
-
-                          </CBadge>
-
-                        </CTableDataCell>
-
-                      </CTableRow>
-                    )
-                  },
-                )}
-
-
-                {propietariosFiltrados.length ===
-                  0 && (
-
-                  <CTableRow>
-
-                    <CTableDataCell
-                      colSpan={7}
-                      className="text-center py-5 text-body-secondary"
-                    >
-
-                      No hay propietarios
-                      que coincidan con la
-                      búsqueda.
+                      </CButton>
 
                     </CTableDataCell>
 
                   </CTableRow>
 
-                )}
+                ),
+              )}
 
-              </CTableBody>
+            </CTableBody>
 
-            </CTable>
+          </CTable>
 
-          )}
+        )}
 
       </CCardBody>
 
