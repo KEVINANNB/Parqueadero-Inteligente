@@ -28,6 +28,10 @@ import usePerfiles
   from '../../hooks/usePerfiles'
 
 
+/* ================================================================
+   FOTO
+   ================================================================ */
+
 function FotoPerfil({
   perfil,
 }) {
@@ -44,7 +48,6 @@ function FotoPerfil({
   ) {
     return (
       <img
-
         src={
           perfil.foto_url
         }
@@ -74,8 +77,10 @@ function FotoPerfil({
 
           border:
             '2px solid #d1e7dd',
-        }}
 
+          background:
+            '#ffffff',
+        }}
       />
     )
   }
@@ -105,6 +110,9 @@ function FotoPerfil({
         color:
           '#087b26',
 
+        border:
+          '2px solid #d1e7dd',
+
         fontWeight:
           800,
       }}
@@ -122,6 +130,10 @@ function FotoPerfil({
   )
 }
 
+
+/* ================================================================
+   COMPONENTE
+   ================================================================ */
 
 export default function Propietarios() {
   const {
@@ -148,11 +160,22 @@ export default function Propietarios() {
 
 
   const [
+    filtroCuenta,
+    setFiltroCuenta,
+  ] =
+    useState('todos')
+
+
+  const [
     mensaje,
     setMensaje,
   ] =
     useState(null)
 
+
+  /* ==============================================================
+     FILTRADO
+     ============================================================== */
 
   const filtrados =
     useMemo(
@@ -164,17 +187,43 @@ export default function Propietarios() {
             .toLowerCase()
 
 
-        if (
-          !texto
-        ) {
-          return perfiles
-        }
-
-
         return perfiles.filter(
           (
             perfil,
           ) => {
+
+            /* --------------------------------------------------
+               FILTRO CUENTA
+               -------------------------------------------------- */
+
+            if (
+              filtroCuenta ===
+                'con-cuenta' &&
+              !perfil.tieneCuenta
+            ) {
+              return false
+            }
+
+
+            if (
+              filtroCuenta ===
+                'sin-cuenta' &&
+              perfil.tieneCuenta
+            ) {
+              return false
+            }
+
+
+            /* --------------------------------------------------
+               BÚSQUEDA
+               -------------------------------------------------- */
+
+            if (
+              !texto
+            ) {
+              return true
+            }
+
 
             const placas =
               perfil
@@ -188,11 +237,25 @@ export default function Propietarios() {
                 .join(' ')
 
 
+            const autos =
+              perfil
+                .vehiculos
+                .map(
+                  (
+                    vehiculo,
+                  ) =>
+                    `${vehiculo.marca} ${vehiculo.modelo}`,
+                )
+                .join(' ')
+
+
             return [
               perfil.nombre,
               perfil.correo,
               perfil.cedula,
+              perfil.cedula_enmascarada,
               placas,
+              autos,
             ]
               .map(
                 (
@@ -220,25 +283,79 @@ export default function Propietarios() {
       [
         perfiles,
         busqueda,
+        filtroCuenta,
       ],
     )
 
+
+  /* ==============================================================
+     ESTADÍSTICAS
+     ============================================================== */
+
+  const conCuenta =
+    perfiles.filter(
+      (
+        perfil,
+      ) =>
+        perfil.tieneCuenta,
+    ).length
+
+
+  const sinCuenta =
+    perfiles.filter(
+      (
+        perfil,
+      ) =>
+        !perfil.tieneCuenta,
+    ).length
+
+
+  const propietariosConVehiculo =
+    perfiles.filter(
+      (
+        perfil,
+      ) =>
+        perfil
+          .cantidadVehiculos >
+        0,
+    ).length
+
+
+  const vehiculosPendientes =
+    perfiles.reduce(
+      (
+        total,
+        perfil,
+      ) =>
+        total +
+        perfil.pendientes,
+      0,
+    )
+
+
+  /* ==============================================================
+     CAMBIAR ESTADO
+     ============================================================== */
 
   const cambiarEstado =
     async (
       perfil,
     ) => {
 
+      if (
+        !perfil.tieneCuenta
+      ) {
+        return
+      }
+
+
       setMensaje(null)
 
 
       const resultado =
         await cambiarActivo(
-
           perfil.usuario_id,
-
           !perfil.activo,
-
         )
 
 
@@ -252,8 +369,8 @@ export default function Propietarios() {
 
           texto:
             perfil.activo
-              ? 'Cuenta desactivada.'
-              : 'Cuenta activada.',
+              ? 'Cuenta desactivada correctamente.'
+              : 'Cuenta activada correctamente.',
 
         })
       } else {
@@ -271,6 +388,10 @@ export default function Propietarios() {
     }
 
 
+  /* ==============================================================
+     SIN PERMISOS
+     ============================================================== */
+
   if (
     !puedeAdministrar
   ) {
@@ -284,21 +405,25 @@ export default function Propietarios() {
         <br />
 
         La administración completa
-        de cuentas está disponible
-        únicamente en la Vista
-        administrador.
-
-        Los usuarios normales pueden
-        consultar los propietarios
-        asociados desde Vehículos.
+        de propietarios y cuentas
+        está disponible únicamente
+        en la Vista administrador.
 
       </CAlert>
     )
   }
 
 
+  /* ==============================================================
+     RENDER
+     ============================================================== */
+
   return (
     <CCard className="shadow-sm border-0">
+
+      {/* ========================================================
+          HEADER
+          ======================================================== */}
 
       <CCardHeader
         className="d-flex flex-wrap justify-content-between align-items-center gap-3"
@@ -313,8 +438,9 @@ export default function Propietarios() {
 
           <div className="small text-body-secondary mt-1">
 
-            Todas las cuentas registradas,
-            tengan o no vehículos asociados.
+            Todos los propietarios
+            registrados en vehículos y
+            todas las cuentas del sistema.
 
           </div>
 
@@ -322,9 +448,7 @@ export default function Propietarios() {
 
 
         <CButton
-
           color="success"
-
           variant="outline"
 
           disabled={
@@ -335,15 +459,17 @@ export default function Propietarios() {
             recargar
           }
         >
-
           Actualizar
-
         </CButton>
 
       </CCardHeader>
 
 
       <CCardBody>
+
+        {/* ======================================================
+            MENSAJES
+            ====================================================== */}
 
         {mensaje && (
 
@@ -360,9 +486,9 @@ export default function Propietarios() {
         )}
 
 
-        {/* ===================================================
+        {/* ======================================================
             RESUMEN
-            =================================================== */}
+            ====================================================== */}
 
         <div
           style={{
@@ -370,7 +496,7 @@ export default function Propietarios() {
               'grid',
 
             gridTemplateColumns:
-              'repeat(auto-fit,minmax(180px,1fr))',
+              'repeat(auto-fit, minmax(170px, 1fr))',
 
             gap:
               12,
@@ -380,23 +506,41 @@ export default function Propietarios() {
           }}
         >
 
-          <div className="border rounded p-3">
+          {/* TOTAL PROPIETARIOS */}
+
+          <div
+            className="rounded p-3"
+
+            style={{
+              border:
+                '1px solid #dfe3e8',
+
+              background:
+                '#ffffff',
+            }}
+          >
 
             <small className="text-body-secondary">
-              Cuentas registradas
+              Propietarios
             </small>
 
+
             <div className="fs-3 fw-bold">
+
               {
                 perfiles.length
               }
+
             </div>
 
           </div>
 
 
+          {/* CON CUENTA */}
+
           <div
             className="rounded p-3"
+
             style={{
               border:
                 '1px solid #bbf7d0',
@@ -412,11 +556,13 @@ export default function Propietarios() {
                   '#166534',
               }}
             >
-              Con vehículo
+              Con cuenta
             </small>
+
 
             <div
               className="fs-3 fw-bold"
+
               style={{
                 color:
                   '#166534',
@@ -424,14 +570,7 @@ export default function Propietarios() {
             >
 
               {
-                perfiles.filter(
-                  (
-                    perfil,
-                  ) =>
-                    perfil
-                      .cantidadVehiculos >
-                    0,
-                ).length
+                conCuenta
               }
 
             </div>
@@ -439,8 +578,11 @@ export default function Propietarios() {
           </div>
 
 
+          {/* SIN CUENTA */}
+
           <div
             className="rounded p-3"
+
             style={{
               border:
                 '1px solid #bfdbfe',
@@ -456,11 +598,13 @@ export default function Propietarios() {
                   '#1d4ed8',
               }}
             >
-              Sin vehículos
+              Sin cuenta
             </small>
+
 
             <div
               className="fs-3 fw-bold"
+
               style={{
                 color:
                   '#1d4ed8',
@@ -468,14 +612,7 @@ export default function Propietarios() {
             >
 
               {
-                perfiles.filter(
-                  (
-                    perfil,
-                  ) =>
-                    perfil
-                      .cantidadVehiculos ===
-                    0,
-                ).length
+                sinCuenta
               }
 
             </div>
@@ -483,8 +620,11 @@ export default function Propietarios() {
           </div>
 
 
+          {/* PENDIENTES */}
+
           <div
             className="rounded p-3"
+
             style={{
               border:
                 '1px solid #fed7aa',
@@ -503,8 +643,10 @@ export default function Propietarios() {
               Vehículos pendientes
             </small>
 
+
             <div
               className="fs-3 fw-bold"
+
               style={{
                 color:
                   '#9a3412',
@@ -512,15 +654,7 @@ export default function Propietarios() {
             >
 
               {
-                perfiles.reduce(
-                  (
-                    total,
-                    perfil,
-                  ) =>
-                    total +
-                    perfil.pendientes,
-                  0,
-                )
+                vehiculosPendientes
               }
 
             </div>
@@ -530,17 +664,38 @@ export default function Propietarios() {
         </div>
 
 
-        {/* ===================================================
-            BUSCADOR
-            =================================================== */}
+        {/* ======================================================
+            INFORMACIÓN SECUNDARIA
+            ====================================================== */}
 
-        <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div
+          className="small text-body-secondary mb-3"
+        >
+
+          Propietarios con al menos
+          un vehículo:{' '}
+
+          <strong>
+            {
+              propietariosConVehiculo
+            }
+          </strong>
+
+        </div>
+
+
+        {/* ======================================================
+            BUSCADOR + FILTROS
+            ====================================================== */}
+
+        <div
+          className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3"
+        >
 
           <CFormInput
-
             type="search"
 
-            placeholder="Buscar nombre, correo, cédula o placa..."
+            placeholder="Buscar nombre, correo, cédula, placa o vehículo..."
 
             value={
               busqueda
@@ -560,22 +715,114 @@ export default function Propietarios() {
               maxWidth:
                 450,
             }}
-
           />
 
 
-          <span className="text-body-secondary">
+          <div
+            className="d-flex flex-wrap gap-2"
+          >
 
-            {
-              filtrados.length
-            }
+            <CButton
+              size="sm"
 
-            {' '}cuentas
+              color={
+                filtroCuenta ===
+                'todos'
+                  ? 'primary'
+                  : 'secondary'
+              }
 
-          </span>
+              variant={
+                filtroCuenta ===
+                'todos'
+                  ? undefined
+                  : 'outline'
+              }
+
+              onClick={() =>
+                setFiltroCuenta(
+                  'todos',
+                )
+              }
+            >
+              Todos
+            </CButton>
+
+
+            <CButton
+              size="sm"
+
+              color="success"
+
+              variant={
+                filtroCuenta ===
+                'con-cuenta'
+                  ? undefined
+                  : 'outline'
+              }
+
+              onClick={() =>
+                setFiltroCuenta(
+                  'con-cuenta',
+                )
+              }
+            >
+              Con cuenta
+            </CButton>
+
+
+            <CButton
+              size="sm"
+
+              color="primary"
+
+              variant={
+                filtroCuenta ===
+                'sin-cuenta'
+                  ? undefined
+                  : 'outline'
+              }
+
+              onClick={() =>
+                setFiltroCuenta(
+                  'sin-cuenta',
+                )
+              }
+            >
+              Sin cuenta
+            </CButton>
+
+          </div>
 
         </div>
 
+
+        <div className="text-body-secondary small mb-3">
+
+          Mostrando{' '}
+
+          <strong>
+            {
+              filtrados.length
+            }
+          </strong>
+
+          {' '}de{' '}
+
+          <strong>
+            {
+              perfiles.length
+            }
+          </strong>
+
+          {' '}propietarios.
+
+        </div>
+
+
+        {/* ======================================================
+            CARGANDO
+            ====================================================== */}
 
         {cargando && (
 
@@ -586,7 +833,7 @@ export default function Propietarios() {
             />
 
             <p className="mt-3">
-              Cargando cuentas...
+              Cargando propietarios...
             </p>
 
           </div>
@@ -594,14 +841,31 @@ export default function Propietarios() {
         )}
 
 
+        {/* ======================================================
+            ERROR
+            ====================================================== */}
+
         {error && (
 
           <CAlert color="danger">
+
+            <strong>
+              No se pudieron cargar
+              los propietarios.
+            </strong>
+
+            <br />
+
             {error}
+
           </CAlert>
 
         )}
 
+
+        {/* ======================================================
+            TABLA
+            ====================================================== */}
 
         {!cargando &&
           !error && (
@@ -621,33 +885,41 @@ export default function Propietarios() {
                   Foto
                 </CTableHeaderCell>
 
+
                 <CTableHeaderCell>
                   Propietario
                 </CTableHeaderCell>
+
 
                 <CTableHeaderCell>
                   Correo
                 </CTableHeaderCell>
 
+
                 <CTableHeaderCell>
                   Cédula
                 </CTableHeaderCell>
+
 
                 <CTableHeaderCell>
                   Vehículos
                 </CTableHeaderCell>
 
+
                 <CTableHeaderCell>
                   Placas
                 </CTableHeaderCell>
+
 
                 <CTableHeaderCell>
                   Pendientes
                 </CTableHeaderCell>
 
+
                 <CTableHeaderCell>
                   Cuenta
                 </CTableHeaderCell>
+
 
                 <CTableHeaderCell>
                   Acción
@@ -663,13 +935,18 @@ export default function Propietarios() {
               {filtrados.map(
                 (
                   perfil,
+                  indice,
                 ) => (
 
                   <CTableRow
                     key={
                       perfil.usuario_id
+                      ||
+                      `${perfil.correo}-${perfil.nombre}-${indice}`
                     }
                   >
+
+                    {/* FOTO */}
 
                     <CTableDataCell>
 
@@ -682,6 +959,8 @@ export default function Propietarios() {
                     </CTableDataCell>
 
 
+                    {/* PROPIETARIO */}
+
                     <CTableDataCell>
 
                       <strong>
@@ -691,54 +970,95 @@ export default function Propietarios() {
                       </strong>
 
 
-                      {perfil
-                        .cantidadVehiculos ===
-                        0 && (
+                      <div className="mt-1">
 
-                        <div>
+                        {perfil.tieneCuenta ? (
+
+                          <CBadge
+                            color="success"
+                          >
+                            Cuenta registrada
+                          </CBadge>
+
+                        ) : (
 
                           <CBadge
                             color="secondary"
-                            className="mt-1"
                           >
-                            Sin vehículos
+                            Propietario histórico
                           </CBadge>
 
-                        </div>
+                        )}
+
+                      </div>
+
+                    </CTableDataCell>
+
+
+                    {/* CORREO */}
+
+                    <CTableDataCell>
+
+                      {perfil.correo ? (
+
+                        <a
+                          href={
+                            `mailto:${perfil.correo}`
+                          }
+
+                          style={{
+                            color:
+                              '#087b26',
+
+                            textDecoration:
+                              'none',
+                          }}
+                        >
+
+                          {
+                            perfil.correo
+                          }
+
+                        </a>
+
+                      ) : (
+
+                        <span className="text-body-secondary">
+                          No registrado
+                        </span>
 
                       )}
 
                     </CTableDataCell>
 
 
-                    <CTableDataCell>
-
-                      <a
-                        href={
-                          `mailto:${perfil.correo}`
-                        }
-                      >
-                        {
-                          perfil.correo
-                        }
-                      </a>
-
-                    </CTableDataCell>
-
+                    {/* CÉDULA */}
 
                     <CTableDataCell>
 
                       {
                         perfil
                           .cedula_enmascarada
+                        ||
+                        'No registrada'
                       }
 
                     </CTableDataCell>
 
 
+                    {/* VEHÍCULOS */}
+
                     <CTableDataCell>
 
-                      <CBadge color="info">
+                      <CBadge
+                        color={
+                          perfil
+                            .cantidadVehiculos >
+                          0
+                            ? 'info'
+                            : 'secondary'
+                        }
+                      >
 
                         {
                           perfil
@@ -750,29 +1070,38 @@ export default function Propietarios() {
                     </CTableDataCell>
 
 
+                    {/* PLACAS */}
+
                     <CTableDataCell>
 
-                      <div className="d-flex flex-wrap gap-1">
+                      <div
+                        className="d-flex flex-wrap gap-1"
+                      >
 
                         {
-                          perfil.vehiculos.map(
-                            (
-                              vehiculo,
-                            ) => (
+                          perfil
+                            .vehiculos
+                            .map(
+                              (
+                                vehiculo,
+                              ) => (
 
-                              <CBadge
-                                color="dark"
-                                key={
-                                  vehiculo.id
-                                }
-                              >
-                                {
-                                  vehiculo.placa
-                                }
-                              </CBadge>
+                                <CBadge
+                                  color="dark"
 
-                            ),
-                          )
+                                  key={
+                                    vehiculo.id
+                                  }
+                                >
+
+                                  {
+                                    vehiculo.placa
+                                  }
+
+                                </CBadge>
+
+                              ),
+                            )
                         }
 
 
@@ -780,13 +1109,19 @@ export default function Propietarios() {
                           .vehiculos
                           .length ===
                           0 && (
-                          '—'
+
+                          <span className="text-body-secondary">
+                            —
+                          </span>
+
                         )}
 
                       </div>
 
                     </CTableDataCell>
 
+
+                    {/* PENDIENTES */}
 
                     <CTableDataCell>
 
@@ -797,9 +1132,11 @@ export default function Propietarios() {
                           color="warning"
                           textColor="dark"
                         >
+
                           {
                             perfil.pendientes
                           }
+
                         </CBadge>
 
                       ) : (
@@ -813,61 +1150,108 @@ export default function Propietarios() {
                     </CTableDataCell>
 
 
+                    {/* CUENTA */}
+
                     <CTableDataCell>
 
-                      <CBadge
-                        color={
-                          perfil.activo
-                            ? 'success'
-                            : 'danger'
-                        }
-                      >
+                      {perfil.tieneCuenta ? (
 
-                        {
-                          perfil.activo
-                            ? 'Activo'
-                            : 'Inactivo'
-                        }
+                        <CBadge
+                          color={
+                            perfil.activo
+                              ? 'success'
+                              : 'danger'
+                          }
+                        >
 
-                      </CBadge>
+                          {
+                            perfil.activo
+                              ? 'Activa'
+                              : 'Inactiva'
+                          }
+
+                        </CBadge>
+
+                      ) : (
+
+                        <CBadge
+                          color="secondary"
+                        >
+                          Sin cuenta
+                        </CBadge>
+
+                      )}
 
                     </CTableDataCell>
 
 
+                    {/* ACCIÓN */}
+
                     <CTableDataCell>
 
-                      <CButton
+                      {perfil.tieneCuenta ? (
 
-                        size="sm"
+                        <CButton
+                          size="sm"
 
-                        color={
-                          perfil.activo
-                            ? 'danger'
-                            : 'success'
-                        }
+                          color={
+                            perfil.activo
+                              ? 'danger'
+                              : 'success'
+                          }
 
-                        variant="outline"
+                          variant="outline"
 
-                        onClick={() =>
-                          cambiarEstado(
-                            perfil,
-                          )
-                        }
-                      >
+                          onClick={() =>
+                            cambiarEstado(
+                              perfil,
+                            )
+                          }
+                        >
 
-                        {
-                          perfil.activo
-                            ? 'Desactivar'
-                            : 'Activar'
-                        }
+                          {
+                            perfil.activo
+                              ? 'Desactivar'
+                              : 'Activar'
+                          }
 
-                      </CButton>
+                        </CButton>
+
+                      ) : (
+
+                        <span
+                          className="small text-body-secondary"
+                        >
+                          Sin cuenta
+                        </span>
+
+                      )}
 
                     </CTableDataCell>
 
                   </CTableRow>
 
                 ),
+              )}
+
+
+              {filtrados.length ===
+                0 && (
+
+                <CTableRow>
+
+                  <CTableDataCell
+                    colSpan={9}
+                    className="text-center py-5 text-body-secondary"
+                  >
+
+                    No se encontraron
+                    propietarios.
+
+                  </CTableDataCell>
+
+                </CTableRow>
+
               )}
 
             </CTableBody>
