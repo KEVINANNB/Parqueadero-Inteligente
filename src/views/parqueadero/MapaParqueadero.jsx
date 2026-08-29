@@ -10,10 +10,15 @@ import {
 
 import CIcon from '@coreui/icons-react'
 import { cilMap, cilReload } from '@coreui/icons'
-
+import PageSectionHeader from '../../components/PageSectionHeader'
 import usePuestos from '../../hooks/usePuestos'
 import MapaParqueaderoVisual from '../../components/MapaParqueaderoVisual'
 
+<PageSectionHeader
+  breadcrumb={['Inicio', 'Mapa del parqueadero']}
+  title="Mapa del parqueadero"
+  subtitle="Visualiza gráficamente los espacios del parqueadero y consulta la información de cada puesto."
+/>
 function TarjetaEstado({
   titulo,
   valor,

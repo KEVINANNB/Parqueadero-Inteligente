@@ -28,7 +28,7 @@ import {
   descargarJsonRTDB,
 } from '../services/exportarDatos'
 
-
+import PageSectionHeader from '../components/PageSectionHeader'
 export default function Estacionamiento() {
   const {
 
@@ -442,6 +442,11 @@ export default function Estacionamiento() {
 
       </div>
 
+      <PageSectionHeader
+        breadcrumb={['Inicio', 'Parqueadero']}
+        title="Parqueadero inteligente"
+        subtitle="Consulta la disponibilidad general de los 80 espacios, la ocupación y el estado del sistema en tiempo real."
+      />
     </>
   )
 }
