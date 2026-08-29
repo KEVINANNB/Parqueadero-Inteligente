@@ -31,12 +31,6 @@ import useMiCuenta
 
 import VehiculoFormModal
   from '../../components/VehiculoFormModal'
-import PageSectionHeader from '../../components/PageSectionHeader'
-<PageSectionHeader
-  breadcrumb={['Inicio', 'Mis vehículos']}
-  title="Mis vehículos"
-  subtitle="Consulta y actualiza los vehículos vinculados a tu cuenta dentro del sistema Smart Parking UTEQ."
-/>
 
 export default function MisVehiculos() {
   const {

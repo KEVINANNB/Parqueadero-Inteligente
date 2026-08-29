@@ -47,6 +47,9 @@ import MisVehiculos
 import AppHeader
   from './components/AppHeader'
 
+import AppBreadcrumb
+  from './components/AppBreadcrumb'
+
 import {
   useAuth,
 } from './context/AuthContext'
@@ -55,6 +58,7 @@ import {
 export default function App() {
   const ubicacion =
     useLocation()
+
 
   const {
     autenticado,
@@ -67,9 +71,11 @@ export default function App() {
      ========================================================= */
 
   const esPaginaAuth =
-    ubicacion.pathname === '/login'
+    ubicacion.pathname ===
+      '/login'
     ||
-    ubicacion.pathname === '/registro'
+    ubicacion.pathname ===
+      '/registro'
 
 
   /* =========================================================
@@ -115,6 +121,18 @@ export default function App() {
         }
       >
 
+        {/* =====================================================
+            MIGA DE PAN GLOBAL
+
+            Se muestra automáticamente
+            según la ruta actual.
+            ===================================================== */}
+
+        {!esPaginaAuth && (
+          <AppBreadcrumb />
+        )}
+
+
         <Routes>
 
           {/* =================================================
@@ -130,7 +148,7 @@ export default function App() {
 
 
           {/* =================================================
-              PARQUEADERO GENERAL
+              PARQUEADERO
               ================================================= */}
 
           <Route
@@ -150,7 +168,7 @@ export default function App() {
 
 
           {/* =================================================
-              MAPA DEL PARQUEADERO
+              MAPA
               ================================================= */}
 
           <Route
@@ -162,11 +180,8 @@ export default function App() {
 
 
           {/* =================================================
-              MÓDULO DE GESTIÓN
-              
-              AQUÍ ESTÁ LA CORRECCIÓN IMPORTANTE.
-              GestionParqueaderoLayout contiene el menú lateral.
-              Outlet muestra cada sección a la derecha.
+              MÓDULO VEHÍCULOS / PUESTOS /
+              PROPIETARIOS / HISTORIAL
               ================================================= */}
 
           <Route
@@ -175,8 +190,6 @@ export default function App() {
               <GestionParqueaderoLayout />
             }
           >
-
-            {/* Si entran solamente a /parqueadero */}
 
             <Route
               index
@@ -189,8 +202,6 @@ export default function App() {
             />
 
 
-            {/* VEHÍCULOS */}
-
             <Route
               path="vehiculos"
               element={
@@ -198,8 +209,6 @@ export default function App() {
               }
             />
 
-
-            {/* PUESTOS */}
 
             <Route
               path="puestos"
@@ -209,8 +218,6 @@ export default function App() {
             />
 
 
-            {/* PROPIETARIOS */}
-
             <Route
               path="propietarios"
               element={
@@ -218,8 +225,6 @@ export default function App() {
               }
             />
 
-
-            {/* HISTORIAL */}
 
             <Route
               path="historial"
@@ -272,7 +277,7 @@ export default function App() {
 
 
           {/* =================================================
-              CUALQUIER RUTA DESCONOCIDA
+              404
               ================================================= */}
 
           <Route
@@ -303,9 +308,11 @@ export default function App() {
         <footer className="app-footer">
 
           <p>
+
             UTEQ · Aplicaciones
             Telemáticas Basadas en Web
             · Smart Parking UTEQ
+
           </p>
 
         </footer>

@@ -16,13 +16,7 @@ import {
 } from '@coreui/react'
 
 import useMiCuenta from '../../hooks/useMiCuenta'
-import PageSectionHeader from '../../components/PageSectionHeader'
 
-<PageSectionHeader
-  breadcrumb={['Inicio', 'Mi perfil']}
-  title="Mi perfil"
-  subtitle="Consulta y actualiza tu información personal, fotografía y datos asociados a tu cuenta."
-/>
 export default function MiPerfil() {
   const {
     perfil,
