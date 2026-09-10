@@ -1,4 +1,10 @@
 import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+
+import {
   Navigate,
 } from 'react-router-dom'
 
@@ -9,6 +15,7 @@ import {
   CCard,
   CCardBody,
   CCardHeader,
+  CSpinner,
 } from '@coreui/react'
 
 import CIcon
@@ -16,12 +23,31 @@ import CIcon
 
 import {
   cilCamera,
+  cilFolderOpen,
+  cilMediaStop,
 } from '@coreui/icons'
 
 import {
   useAuth,
 } from '../../context/AuthContext'
 
+
+/* ================================================================
+   CONFIGURACIÓN
+   ================================================================ */
+
+const TAMANO_MAXIMO =
+  4 * 1024 * 1024
+
+const TIPOS_PERMITIDOS = [
+  'image/jpeg',
+  'image/png',
+]
+
+
+/* ================================================================
+   COMPONENTE
+   ================================================================ */
 
 export default function MonitoreoEntrada() {
   const {
@@ -31,13 +57,87 @@ export default function MonitoreoEntrada() {
 
 
   /* ==============================================================
+     REFERENCIAS
+     ============================================================== */
+
+  const videoRef =
+    useRef(null)
+
+  const canvasRef =
+    useRef(null)
+
+  const inputArchivoRef =
+    useRef(null)
+
+  const streamRef =
+    useRef(null)
+
+  const urlTemporalRef =
+    useRef(null)
+
+
+  /* ==============================================================
+     ESTADOS
+     ============================================================== */
+
+  const [
+    camaraActiva,
+    setCamaraActiva,
+  ] =
+    useState(false)
+
+
+  const [
+    iniciandoCamara,
+    setIniciandoCamara,
+  ] =
+    useState(false)
+
+
+  const [
+    imagen,
+    setImagen,
+  ] =
+    useState(null)
+
+
+  const [
+    vistaPrevia,
+    setVistaPrevia,
+  ] =
+    useState('')
+
+
+  const [
+    nombreImagen,
+    setNombreImagen,
+  ] =
+    useState('')
+
+
+  const [
+    origenImagen,
+    setOrigenImagen,
+  ] =
+    useState('')
+
+
+  const [
+    error,
+    setError,
+  ] =
+    useState('')
+
+
+  const [
+    mensaje,
+    setMensaje,
+  ] =
+    useState('')
+
+
+  /* ==============================================================
      SEGURIDAD
-
-     La actividad solicita que esta vista pertenezca
-     al panel administrativo.
-
-     Un usuario normal no debe poder entrar escribiendo
-     manualmente la URL.
      ============================================================== */
 
   if (
@@ -52,6 +152,751 @@ export default function MonitoreoEntrada() {
   }
 
 
+  /* ==============================================================
+     LIBERAR URL TEMPORAL
+     ============================================================== */
+
+  const liberarUrlTemporal =
+    () => {
+
+      if (
+        urlTemporalRef.current
+      ) {
+        URL.revokeObjectURL(
+          urlTemporalRef.current,
+        )
+
+        urlTemporalRef.current =
+          null
+      }
+
+    }
+
+
+  /* ==============================================================
+     DETENER CÁMARA
+     ============================================================== */
+
+  const detenerCamara =
+    () => {
+
+      const stream =
+        streamRef.current
+
+
+      if (
+        stream
+      ) {
+
+        stream
+          .getTracks()
+          .forEach(
+            (
+              track,
+            ) => {
+
+              track.stop()
+
+            },
+          )
+
+      }
+
+
+      streamRef.current =
+        null
+
+
+      if (
+        videoRef.current
+      ) {
+        videoRef.current.srcObject =
+          null
+      }
+
+
+      setCamaraActiva(
+        false,
+      )
+    }
+
+
+  /* ==============================================================
+     LIMPIEZA AL SALIR DE LA PÁGINA
+     ============================================================== */
+
+  useEffect(
+    () => {
+
+      return () => {
+
+        const stream =
+          streamRef.current
+
+
+        if (
+          stream
+        ) {
+
+          stream
+            .getTracks()
+            .forEach(
+              (
+                track,
+              ) => {
+
+                track.stop()
+
+              },
+            )
+
+        }
+
+
+        if (
+          urlTemporalRef.current
+        ) {
+
+          URL.revokeObjectURL(
+            urlTemporalRef.current,
+          )
+
+        }
+
+      }
+
+    },
+    [],
+  )
+
+
+  /* ==============================================================
+     CREAR VISTA PREVIA
+     ============================================================== */
+
+  const establecerImagen =
+    (
+      archivo,
+      origen,
+      nombre,
+    ) => {
+
+      liberarUrlTemporal()
+
+
+      const nuevaUrl =
+        URL.createObjectURL(
+          archivo,
+        )
+
+
+      urlTemporalRef.current =
+        nuevaUrl
+
+
+      setImagen(
+        archivo,
+      )
+
+
+      setVistaPrevia(
+        nuevaUrl,
+      )
+
+
+      setOrigenImagen(
+        origen,
+      )
+
+
+      setNombreImagen(
+        nombre,
+      )
+
+
+      setError(
+        '',
+      )
+    }
+
+
+  /* ==============================================================
+     ACTIVAR CÁMARA
+     ============================================================== */
+
+  const activarCamara =
+    async () => {
+
+      setError(
+        '',
+      )
+
+      setMensaje(
+        '',
+      )
+
+      setIniciandoCamara(
+        true,
+      )
+
+
+      try {
+
+        /* ========================================================
+           COMPROBAR SOPORTE DEL NAVEGADOR
+           ======================================================== */
+
+        if (
+          !navigator.mediaDevices ||
+          !navigator.mediaDevices.getUserMedia
+        ) {
+
+          throw new Error(
+            'Tu navegador no permite acceder a la cámara.',
+          )
+
+        }
+
+
+        /* ========================================================
+           SI HABÍA UNA CÁMARA ABIERTA, LA CERRAMOS
+           ======================================================== */
+
+        detenerCamara()
+
+
+        /* ========================================================
+           SOLICITAR CÁMARA
+
+           facingMode environment:
+           preferencia por cámara posterior en móviles.
+           ======================================================== */
+
+        const stream =
+          await navigator
+            .mediaDevices
+            .getUserMedia({
+
+              audio:
+                false,
+
+              video: {
+
+                facingMode: {
+                  ideal:
+                    'environment',
+                },
+
+                width: {
+                  ideal:
+                    1280,
+                },
+
+                height: {
+                  ideal:
+                    720,
+                },
+
+              },
+
+            })
+
+
+        streamRef.current =
+          stream
+
+
+        if (
+          videoRef.current
+        ) {
+
+          videoRef.current.srcObject =
+            stream
+
+
+          await videoRef.current.play()
+
+        }
+
+
+        setCamaraActiva(
+          true,
+        )
+
+
+        setMensaje(
+          'Cámara activada correctamente.',
+        )
+
+      } catch (
+        err
+      ) {
+
+        console.error(
+          'Error al activar cámara:',
+          err,
+        )
+
+
+        let texto =
+          'No fue posible iniciar la cámara.'
+
+
+        if (
+          err?.name ===
+          'NotAllowedError'
+        ) {
+
+          texto =
+            'El navegador no tiene permiso para utilizar la cámara. Permite el acceso a la cámara y vuelve a intentarlo.'
+
+        } else if (
+          err?.name ===
+          'NotFoundError'
+        ) {
+
+          texto =
+            'No se encontró ninguna cámara disponible en este dispositivo.'
+
+        } else if (
+          err?.name ===
+          'NotReadableError'
+        ) {
+
+          texto =
+            'La cámara está siendo utilizada por otra aplicación o no se encuentra disponible.'
+
+        } else if (
+          err?.name ===
+          'OverconstrainedError'
+        ) {
+
+          texto =
+            'La cámara encontrada no admite la configuración solicitada.'
+
+        } else if (
+          err?.message
+        ) {
+
+          texto =
+            err.message
+
+        }
+
+
+        setError(
+          texto,
+        )
+
+
+        setCamaraActiva(
+          false,
+        )
+
+      } finally {
+
+        setIniciandoCamara(
+          false,
+        )
+
+      }
+
+    }
+
+
+  /* ==============================================================
+     CAPTURAR FOTO
+     ============================================================== */
+
+  const capturarFoto =
+    async () => {
+
+      setError(
+        '',
+      )
+
+      setMensaje(
+        '',
+      )
+
+
+      const video =
+        videoRef.current
+
+      const canvas =
+        canvasRef.current
+
+
+      if (
+        !video ||
+        !canvas
+      ) {
+
+        setError(
+          'No fue posible acceder a la cámara.',
+        )
+
+        return
+      }
+
+
+      if (
+        !video.videoWidth ||
+        !video.videoHeight
+      ) {
+
+        setError(
+          'La cámara todavía se está preparando. Espera un momento y vuelve a capturar.',
+        )
+
+        return
+      }
+
+
+      try {
+
+        /* ========================================================
+           AJUSTAR CANVAS A LA RESOLUCIÓN REAL
+           ======================================================== */
+
+        canvas.width =
+          video.videoWidth
+
+        canvas.height =
+          video.videoHeight
+
+
+        const contexto =
+          canvas.getContext(
+            '2d',
+          )
+
+
+        if (
+          !contexto
+        ) {
+
+          throw new Error(
+            'No fue posible preparar la captura.',
+          )
+
+        }
+
+
+        contexto.drawImage(
+          video,
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        )
+
+
+        /* ========================================================
+           CANVAS -> BLOB JPEG
+
+           Este Blob será el que después enviaremos
+           directamente al endpoint OCR.
+           ======================================================== */
+
+        const blob =
+          await new Promise(
+            (
+              resolve,
+              reject,
+            ) => {
+
+              canvas.toBlob(
+
+                (
+                  resultado,
+                ) => {
+
+                  if (
+                    resultado
+                  ) {
+
+                    resolve(
+                      resultado,
+                    )
+
+                  } else {
+
+                    reject(
+                      new Error(
+                        'No fue posible generar la fotografía.',
+                      ),
+                    )
+
+                  }
+
+                },
+
+                'image/jpeg',
+
+                0.92,
+
+              )
+
+            },
+          )
+
+
+        if (
+          blob.size >
+          TAMANO_MAXIMO
+        ) {
+
+          setError(
+            'La fotografía supera el tamaño máximo permitido de 4 MiB.',
+          )
+
+          return
+        }
+
+
+        const fecha =
+          new Date()
+
+
+        const nombre =
+          `captura-vehiculo-${fecha.getTime()}.jpg`
+
+
+        establecerImagen(
+          blob,
+          'camara',
+          nombre,
+        )
+
+
+        setMensaje(
+          'Fotografía capturada correctamente. Ya está lista para el reconocimiento.',
+        )
+
+      } catch (
+        err
+      ) {
+
+        console.error(
+          'Error capturando fotografía:',
+          err,
+        )
+
+
+        setError(
+          err?.message ||
+          'No fue posible capturar la fotografía.',
+        )
+
+      }
+
+    }
+
+
+  /* ==============================================================
+     ABRIR SELECTOR DE ARCHIVOS
+     ============================================================== */
+
+  const abrirSelector =
+    () => {
+
+      setError(
+        '',
+      )
+
+      setMensaje(
+        '',
+      )
+
+
+      inputArchivoRef
+        .current
+        ?.click()
+
+    }
+
+
+  /* ==============================================================
+     SELECCIONAR IMAGEN DESDE PC / MÓVIL
+     ============================================================== */
+
+  const seleccionarImagen =
+    (
+      evento,
+    ) => {
+
+      setError(
+        '',
+      )
+
+      setMensaje(
+        '',
+      )
+
+
+      const archivo =
+        evento
+          .target
+          .files?.[0]
+
+
+      if (
+        !archivo
+      ) {
+        return
+      }
+
+
+      /* ========================================================
+         VALIDAR TIPO
+         ======================================================== */
+
+      if (
+        !TIPOS_PERMITIDOS.includes(
+          archivo.type,
+        )
+      ) {
+
+        setError(
+          'Formato no permitido. Selecciona únicamente una imagen JPG, JPEG o PNG.',
+        )
+
+
+        evento.target.value =
+          ''
+
+        return
+      }
+
+
+      /* ========================================================
+         VALIDAR TAMAÑO
+         ======================================================== */
+
+      if (
+        archivo.size >
+        TAMANO_MAXIMO
+      ) {
+
+        setError(
+          'La imagen supera el tamaño máximo permitido de 4 MiB.',
+        )
+
+
+        evento.target.value =
+          ''
+
+        return
+      }
+
+
+      /* ========================================================
+         SI LA CÁMARA ESTÁ ABIERTA, PODEMOS CERRARLA
+         ======================================================== */
+
+      detenerCamara()
+
+
+      establecerImagen(
+        archivo,
+        'archivo',
+        archivo.name,
+      )
+
+
+      setMensaje(
+        'Imagen seleccionada correctamente. Ya está lista para el reconocimiento.',
+      )
+
+
+      /*
+       * Permite volver a seleccionar
+       * posteriormente el mismo archivo.
+       */
+
+      evento.target.value =
+        ''
+
+    }
+
+
+  /* ==============================================================
+     DESCARTAR IMAGEN
+     ============================================================== */
+
+  const descartarImagen =
+    () => {
+
+      liberarUrlTemporal()
+
+
+      setImagen(
+        null,
+      )
+
+      setVistaPrevia(
+        '',
+      )
+
+      setNombreImagen(
+        '',
+      )
+
+      setOrigenImagen(
+        '',
+      )
+
+      setMensaje(
+        '',
+      )
+
+      setError(
+        '',
+      )
+
+    }
+
+
+  /* ==============================================================
+     FORMATEAR TAMAÑO
+     ============================================================== */
+
+  const obtenerTamano =
+    () => {
+
+      if (
+        !imagen?.size
+      ) {
+        return ''
+      }
+
+
+      const kb =
+        imagen.size /
+        1024
+
+
+      if (
+        kb < 1024
+      ) {
+
+        return (
+          `${kb.toFixed(1)} KB`
+        )
+
+      }
+
+
+      return (
+        `${(
+          kb / 1024
+        ).toFixed(2)} MB`
+      )
+
+    }
+
+
   return (
     <>
 
@@ -62,7 +907,8 @@ export default function MonitoreoEntrada() {
            ===================================================== */
 
         .monitoreo-entrada {
-          width: 100%;
+          width:
+            100%;
         }
 
 
@@ -71,73 +917,103 @@ export default function MonitoreoEntrada() {
            ===================================================== */
 
         .monitoreo-entrada-encabezado {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
+          display:
+            flex;
 
-          gap: 18px;
+          justify-content:
+            space-between;
 
-          margin-bottom: 18px;
+          align-items:
+            flex-start;
+
+          gap:
+            18px;
+
+          margin-bottom:
+            18px;
         }
 
 
         .monitoreo-entrada-kicker {
-          margin-bottom: 4px;
+          margin-bottom:
+            4px;
 
-          color: #159447;
+          color:
+            #159447;
 
-          font-size: 11px;
-          font-weight: 800;
+          font-size:
+            11px;
 
-          letter-spacing: .06em;
+          font-weight:
+            800;
+
+          letter-spacing:
+            .06em;
         }
 
 
         .monitoreo-entrada-titulo {
-          margin: 0;
+          margin:
+            0;
 
-          color: #172033;
+          color:
+            #172033;
 
-          font-size: 27px;
-          font-weight: 700;
+          font-size:
+            27px;
+
+          font-weight:
+            700;
         }
 
 
         .monitoreo-entrada-descripcion {
-          max-width: 700px;
+          max-width:
+            700px;
 
-          margin-top: 7px;
-          margin-bottom: 0;
+          margin-top:
+            7px;
 
-          color: #687386;
+          margin-bottom:
+            0;
 
-          font-size: 13px;
+          color:
+            #687386;
 
-          line-height: 1.5;
+          font-size:
+            13px;
+
+          line-height:
+            1.5;
         }
 
 
         /* =====================================================
-           DOS COLUMNAS
+           GRID
            ===================================================== */
 
         .monitoreo-entrada-grid {
-          display: grid;
+          display:
+            grid;
 
           grid-template-columns:
             minmax(0, 1.05fr)
             minmax(0, .95fr);
 
-          gap: 18px;
+          gap:
+            18px;
 
-          align-items: stretch;
+          align-items:
+            stretch;
         }
 
 
         .monitoreo-entrada-card {
-          height: 100%;
+          height:
+            100%;
 
-          overflow: hidden;
+          overflow:
+            hidden;
 
           border:
             1px solid #dfe5eb;
@@ -162,70 +1038,150 @@ export default function MonitoreoEntrada() {
 
 
         .monitoreo-entrada-card-titulo {
-          margin: 0;
+          margin:
+            0;
 
-          color: #172033;
+          color:
+            #172033;
 
-          font-size: 14px;
-          font-weight: 700;
+          font-size:
+            14px;
+
+          font-weight:
+            700;
         }
 
 
         .monitoreo-entrada-card-subtitulo {
-          margin-top: 3px;
+          margin-top:
+            3px;
 
-          color: #7a8594;
+          color:
+            #7a8594;
 
-          font-size: 11px;
+          font-size:
+            11px;
         }
 
 
         /* =====================================================
-           ZONA DE CÁMARA
+           CÁMARA
            ===================================================== */
 
         .monitoreo-camara-marco {
-          width: 100%;
+          position:
+            relative;
 
-          aspect-ratio: 16 / 9;
+          width:
+            100%;
 
-          min-height: 320px;
+          aspect-ratio:
+            16 / 9;
 
-          display: grid;
-          place-items: center;
+          min-height:
+            320px;
 
-          overflow: hidden;
+          display:
+            grid;
+
+          place-items:
+            center;
+
+          overflow:
+            hidden;
 
           border:
-            2px dashed #cdd7df;
+            1px solid #d6dee5;
 
           border-radius:
             10px;
 
           background:
-            linear-gradient(
-              135deg,
-              #f8fafc,
-              #eef4f1
-            );
+            #111827;
 
-          text-align: center;
+          text-align:
+            center;
         }
 
 
-        .monitoreo-camara-placeholder {
-          max-width: 330px;
+        /* =====================================================
+           VIDEO
+           ===================================================== */
 
-          padding: 25px;
+        .monitoreo-video {
+          width:
+            100%;
+
+          height:
+            100%;
+
+          position:
+            absolute;
+
+          inset:
+            0;
+
+          object-fit:
+            cover;
+
+          background:
+            #111827;
+        }
+
+
+        /* =====================================================
+           VISTA PREVIA
+           ===================================================== */
+
+        .monitoreo-preview {
+          width:
+            100%;
+
+          height:
+            100%;
+
+          position:
+            absolute;
+
+          inset:
+            0;
+
+          object-fit:
+            contain;
+
+          background:
+            #111827;
+        }
+
+
+        /* =====================================================
+           PLACEHOLDER
+           ===================================================== */
+
+        .monitoreo-camara-placeholder {
+          max-width:
+            340px;
+
+          padding:
+            25px;
+
+          color:
+            #ffffff;
         }
 
 
         .monitoreo-camara-icono {
-          width: 62px;
-          height: 62px;
+          width:
+            62px;
 
-          display: grid;
-          place-items: center;
+          height:
+            62px;
+
+          display:
+            grid;
+
+          place-items:
+            center;
 
           margin:
             0 auto 14px;
@@ -234,45 +1190,219 @@ export default function MonitoreoEntrada() {
             50%;
 
           background:
-            #e1f4e7;
+            rgba(
+              34,
+              197,
+              94,
+              .16
+            );
 
           color:
-            #159447;
+            #4ade80;
         }
 
 
         .monitoreo-camara-icono svg {
-          width: 29px;
-          height: 29px;
+          width:
+            29px;
+
+          height:
+            29px;
         }
 
 
         .monitoreo-camara-placeholder h4 {
-          margin-bottom: 7px;
+          margin-bottom:
+            7px;
 
-          color: #172033;
+          color:
+            #ffffff;
 
-          font-size: 17px;
+          font-size:
+            17px;
         }
 
 
         .monitoreo-camara-placeholder p {
-          margin: 0;
+          margin:
+            0;
 
-          color: #718096;
+          color:
+            #cbd5e1;
 
-          font-size: 12px;
+          font-size:
+            12px;
 
-          line-height: 1.5;
+          line-height:
+            1.5;
         }
 
 
         /* =====================================================
-           BOTONES
+           ETIQUETA SUPERIOR DE CÁMARA
+           ===================================================== */
+
+        .monitoreo-live-badge {
+          position:
+            absolute;
+
+          z-index:
+            5;
+
+          top:
+            12px;
+
+          left:
+            12px;
+
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          gap:
+            6px;
+
+          padding:
+            6px 10px;
+
+          border-radius:
+            999px;
+
+          background:
+            rgba(
+              17,
+              24,
+              39,
+              .82
+            );
+
+          color:
+            #ffffff;
+
+          font-size:
+            10px;
+
+          font-weight:
+            700;
+        }
+
+
+        .monitoreo-live-punto {
+          width:
+            8px;
+
+          height:
+            8px;
+
+          border-radius:
+            50%;
+
+          background:
+            #ef4444;
+
+          box-shadow:
+            0 0 0
+            4px
+            rgba(
+              239,
+              68,
+              68,
+              .16
+            );
+        }
+
+
+        /* =====================================================
+           INFORMACIÓN DEL ARCHIVO
+           ===================================================== */
+
+        .monitoreo-archivo {
+          display:
+            flex;
+
+          justify-content:
+            space-between;
+
+          align-items:
+            center;
+
+          gap:
+            12px;
+
+          margin-top:
+            12px;
+
+          padding:
+            10px 12px;
+
+          border:
+            1px solid #dfe5eb;
+
+          border-radius:
+            8px;
+
+          background:
+            #f8fafc;
+        }
+
+
+        .monitoreo-archivo-info {
+          min-width:
+            0;
+        }
+
+
+        .monitoreo-archivo-nombre {
+          display:
+            block;
+
+          max-width:
+            420px;
+
+          overflow:
+            hidden;
+
+          text-overflow:
+            ellipsis;
+
+          white-space:
+            nowrap;
+
+          color:
+            #172033;
+
+          font-size:
+            11px;
+
+          font-weight:
+            700;
+        }
+
+
+        .monitoreo-archivo-meta {
+          display:
+            block;
+
+          margin-top:
+            3px;
+
+          color:
+            #7a8594;
+
+          font-size:
+            10px;
+        }
+
+
+        /* =====================================================
+           CONTROLES
            ===================================================== */
 
         .monitoreo-controles {
-          display: grid;
+          display:
+            grid;
 
           grid-template-columns:
             repeat(
@@ -280,9 +1410,29 @@ export default function MonitoreoEntrada() {
               minmax(0, 1fr)
             );
 
-          gap: 10px;
+          gap:
+            10px;
 
-          margin-top: 14px;
+          margin-top:
+            14px;
+        }
+
+
+        .monitoreo-controles-camara {
+          display:
+            grid;
+
+          grid-template-columns:
+            repeat(
+              2,
+              minmax(0, 1fr)
+            );
+
+          gap:
+            10px;
+
+          margin-bottom:
+            10px;
         }
 
 
@@ -293,34 +1443,92 @@ export default function MonitoreoEntrada() {
 
 
         /* =====================================================
+           SEPARADOR
+           ===================================================== */
+
+        .monitoreo-separador {
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          gap:
+            12px;
+
+          margin:
+            16px 0 12px;
+
+          color:
+            #94a3b8;
+
+          font-size:
+            10px;
+        }
+
+
+        .monitoreo-separador::before,
+        .monitoreo-separador::after {
+          content:
+            '';
+
+          flex:
+            1;
+
+          height:
+            1px;
+
+          background:
+            #e2e8f0;
+        }
+
+
+        /* =====================================================
            RESULTADO VACÍO
            ===================================================== */
 
         .monitoreo-resultado-vacio {
-          min-height: 280px;
+          min-height:
+            280px;
 
-          display: flex;
-          flex-direction: column;
+          display:
+            flex;
 
-          justify-content: center;
-          align-items: center;
+          flex-direction:
+            column;
 
-          padding: 30px;
+          justify-content:
+            center;
 
-          text-align: center;
+          align-items:
+            center;
+
+          padding:
+            30px;
+
+          text-align:
+            center;
         }
 
 
         .monitoreo-resultado-vacio-icono {
-          width: 60px;
-          height: 60px;
+          width:
+            60px;
 
-          display: grid;
-          place-items: center;
+          height:
+            60px;
 
-          margin-bottom: 14px;
+          display:
+            grid;
 
-          border-radius: 50%;
+          place-items:
+            center;
+
+          margin-bottom:
+            14px;
+
+          border-radius:
+            50%;
 
           background:
             #eef2f6;
@@ -331,39 +1539,51 @@ export default function MonitoreoEntrada() {
 
 
         .monitoreo-resultado-vacio-icono svg {
-          width: 27px;
-          height: 27px;
+          width:
+            27px;
+
+          height:
+            27px;
         }
 
 
         .monitoreo-resultado-vacio h4 {
-          margin-bottom: 7px;
+          margin-bottom:
+            7px;
 
-          color: #172033;
+          color:
+            #172033;
 
-          font-size: 18px;
+          font-size:
+            18px;
         }
 
 
         .monitoreo-resultado-vacio p {
-          max-width: 350px;
+          max-width:
+            350px;
 
-          margin-bottom: 0;
+          margin-bottom:
+            0;
 
-          color: #718096;
+          color:
+            #718096;
 
-          font-size: 12px;
+          font-size:
+            12px;
 
-          line-height: 1.55;
+          line-height:
+            1.55;
         }
 
 
         /* =====================================================
-           DATOS VACÍOS DEL RESULTADO
+           DATOS RESULTADO
            ===================================================== */
 
         .monitoreo-datos-espera {
-          display: grid;
+          display:
+            grid;
 
           grid-template-columns:
             repeat(
@@ -371,14 +1591,17 @@ export default function MonitoreoEntrada() {
               minmax(0, 1fr)
             );
 
-          gap: 10px;
+          gap:
+            10px;
 
-          margin-top: 15px;
+          margin-top:
+            15px;
         }
 
 
         .monitoreo-dato {
-          padding: 12px;
+          padding:
+            12px;
 
           border:
             1px solid #e0e6eb;
@@ -392,18 +1615,23 @@ export default function MonitoreoEntrada() {
 
 
         .monitoreo-dato-label {
-          display: block;
+          display:
+            block;
 
-          margin-bottom: 5px;
+          margin-bottom:
+            5px;
 
           color:
             #7a8594;
 
-          font-size: 10px;
+          font-size:
+            10px;
 
-          text-transform: uppercase;
+          text-transform:
+            uppercase;
 
-          letter-spacing: .04em;
+          letter-spacing:
+            .04em;
         }
 
 
@@ -411,8 +1639,11 @@ export default function MonitoreoEntrada() {
           color:
             #172033;
 
-          font-size: 13px;
-          font-weight: 700;
+          font-size:
+            13px;
+
+          font-weight:
+            700;
         }
 
 
@@ -464,7 +1695,8 @@ export default function MonitoreoEntrada() {
           }
 
 
-          .monitoreo-controles {
+          .monitoreo-controles,
+          .monitoreo-controles-camara {
             grid-template-columns:
               1fr;
           }
@@ -479,6 +1711,15 @@ export default function MonitoreoEntrada() {
           .monitoreo-datos-espera {
             grid-template-columns:
               1fr;
+          }
+
+
+          .monitoreo-archivo {
+            align-items:
+              flex-start;
+
+            flex-direction:
+              column;
           }
 
         }
@@ -508,9 +1749,9 @@ export default function MonitoreoEntrada() {
 
             <p className="monitoreo-entrada-descripcion">
 
-              Reconocimiento automático de placas
-              para controlar el ingreso de vehículos
-              registrados en UTEQ Smart Parking.
+              Captura o selecciona una fotografía
+              del vehículo para realizar posteriormente
+              el reconocimiento automático de su placa.
 
             </p>
 
@@ -529,26 +1770,43 @@ export default function MonitoreoEntrada() {
 
 
         {/* =====================================================
-            AVISO DEL PASO ACTUAL
+            MENSAJES
             ===================================================== */}
 
-        <CAlert
-          color="info"
-          className="mb-3"
-        >
+        {error && (
 
-          <strong>
-            Módulo preparado.
-          </strong>
+          <CAlert
+            color="danger"
+            dismissible
+            onClose={
+              () =>
+                setError('')
+            }
+          >
 
-          {' '}
+            {error}
 
-          En los siguientes pasos se habilitarán
-          la cámara, la selección de imágenes y
-          el reconocimiento de placas mediante
-          el servicio OCR.
+          </CAlert>
 
-        </CAlert>
+        )}
+
+
+        {mensaje && (
+
+          <CAlert
+            color="success"
+            dismissible
+            onClose={
+              () =>
+                setMensaje('')
+            }
+          >
+
+            {mensaje}
+
+          </CAlert>
+
+        )}
 
 
         {/* =====================================================
@@ -558,7 +1816,7 @@ export default function MonitoreoEntrada() {
         <div className="monitoreo-entrada-grid">
 
           {/* ===================================================
-              IZQUIERDA
+              CAPTURA
               =================================================== */}
 
           <CCard className="monitoreo-entrada-card">
@@ -572,8 +1830,8 @@ export default function MonitoreoEntrada() {
 
               <div className="monitoreo-entrada-card-subtitulo">
 
-                Cámara en tiempo real o imagen
-                seleccionada desde el dispositivo.
+                Utiliza la cámara en tiempo real
+                o selecciona una imagen JPG/PNG.
 
               </div>
 
@@ -582,68 +1840,455 @@ export default function MonitoreoEntrada() {
 
             <CCardBody>
 
+              {/* =================================================
+                  VISOR
+                  ================================================= */}
+
               <div className="monitoreo-camara-marco">
 
-                <div className="monitoreo-camara-placeholder">
+                {/* ===============================================
+                    IMAGEN CAPTURADA / SELECCIONADA
+                    =============================================== */}
 
-                  <div className="monitoreo-camara-icono">
+                {vistaPrevia ? (
+
+                  <img
+
+                    src={
+                      vistaPrevia
+                    }
+
+                    alt="Vehículo seleccionado"
+
+                    className="monitoreo-preview"
+
+                  />
+
+                ) : camaraActiva ? (
+
+                  <>
+
+                    <video
+
+                      ref={
+                        videoRef
+                      }
+
+                      className="monitoreo-video"
+
+                      autoPlay
+
+                      playsInline
+
+                      muted
+
+                    />
+
+
+                    <div className="monitoreo-live-badge">
+
+                      <span className="monitoreo-live-punto" />
+
+                      CÁMARA EN VIVO
+
+                    </div>
+
+                  </>
+
+                ) : (
+
+                  <div className="monitoreo-camara-placeholder">
+
+                    <div className="monitoreo-camara-icono">
+
+                      <CIcon
+                        icon={
+                          cilCamera
+                        }
+                      />
+
+                    </div>
+
+
+                    <h4>
+                      Cámara desactivada
+                    </h4>
+
+
+                    <p>
+
+                      Activa la cámara para capturar
+                      una fotografía del vehículo
+                      o selecciona una imagen almacenada
+                      en el dispositivo.
+
+                    </p>
+
+                  </div>
+
+                )}
+
+              </div>
+
+
+              {/* =================================================
+                  CANVAS OCULTO
+                  ================================================= */}
+
+              <canvas
+
+                ref={
+                  canvasRef
+                }
+
+                style={{
+                  display:
+                    'none',
+                }}
+
+              />
+
+
+              {/* =================================================
+                  INPUT OCULTO
+                  ================================================= */}
+
+              <input
+
+                ref={
+                  inputArchivoRef
+                }
+
+                type="file"
+
+                accept="image/jpeg,image/png"
+
+                onChange={
+                  seleccionarImagen
+                }
+
+                style={{
+                  display:
+                    'none',
+                }}
+
+              />
+
+
+              {/* =================================================
+                  INFORMACIÓN DE IMAGEN
+                  ================================================= */}
+
+              {imagen && (
+
+                <div className="monitoreo-archivo">
+
+                  <div className="monitoreo-archivo-info">
+
+                    <span className="monitoreo-archivo-nombre">
+
+                      {nombreImagen}
+
+                    </span>
+
+
+                    <span className="monitoreo-archivo-meta">
+
+                      {
+                        origenImagen ===
+                        'camara'
+                          ? 'Fotografía capturada'
+                          : 'Imagen seleccionada'
+                      }
+
+                      {' · '}
+
+                      {obtenerTamano()}
+
+                    </span>
+
+                  </div>
+
+
+                  <CButton
+
+                    color="danger"
+
+                    variant="ghost"
+
+                    size="sm"
+
+                    onClick={
+                      descartarImagen
+                    }
+
+                  >
+
+                    Descartar
+
+                  </CButton>
+
+                </div>
+
+              )}
+
+
+              {/* =================================================
+                  CONTROLES DE CÁMARA
+                  ================================================= */}
+
+              {!camaraActiva &&
+              !vistaPrevia && (
+
+                <div className="monitoreo-controles">
+
+                  <CButton
+
+                    color="success"
+
+                    onClick={
+                      activarCamara
+                    }
+
+                    disabled={
+                      iniciandoCamara
+                    }
+
+                  >
+
+                    {iniciandoCamara ? (
+
+                      <>
+
+                        <CSpinner
+                          size="sm"
+                          className="me-2"
+                        />
+
+                        Iniciando cámara...
+
+                      </>
+
+                    ) : (
+
+                      <>
+
+                        <CIcon
+                          icon={
+                            cilCamera
+                          }
+                          className="me-2"
+                        />
+
+                        Activar cámara
+
+                      </>
+
+                    )}
+
+                  </CButton>
+
+
+                  <CButton
+
+                    color="secondary"
+
+                    variant="outline"
+
+                    onClick={
+                      abrirSelector
+                    }
+
+                  >
+
+                    <CIcon
+                      icon={
+                        cilFolderOpen
+                      }
+                      className="me-2"
+                    />
+
+                    Seleccionar imagen
+
+                  </CButton>
+
+                </div>
+
+              )}
+
+
+              {/* =================================================
+                  CÁMARA ACTIVA
+                  ================================================= */}
+
+              {camaraActiva &&
+              !vistaPrevia && (
+
+                <div className="monitoreo-controles-camara">
+
+                  <CButton
+
+                    color="success"
+
+                    onClick={
+                      capturarFoto
+                    }
+
+                  >
 
                     <CIcon
                       icon={
                         cilCamera
                       }
+                      className="me-2"
                     />
+
+                    Capturar foto
+
+                  </CButton>
+
+
+                  <CButton
+
+                    color="danger"
+
+                    variant="outline"
+
+                    onClick={
+                      detenerCamara
+                    }
+
+                  >
+
+                    <CIcon
+                      icon={
+                        cilMediaStop
+                      }
+                      className="me-2"
+                    />
+
+                    Detener cámara
+
+                  </CButton>
+
+                </div>
+
+              )}
+
+
+              {/* =================================================
+                  IMAGEN YA CAPTURADA
+                  ================================================= */}
+
+              {vistaPrevia && (
+
+                <>
+
+                  <div className="monitoreo-separador">
+                    cambiar fotografía
+                  </div>
+
+
+                  <div className="monitoreo-controles-camara">
+
+                    <CButton
+
+                      color="secondary"
+
+                      variant="outline"
+
+                      onClick={
+                        () => {
+
+                          descartarImagen()
+
+                          setTimeout(
+                            activarCamara,
+                            0,
+                          )
+
+                        }
+                      }
+
+                    >
+
+                      <CIcon
+                        icon={
+                          cilCamera
+                        }
+                        className="me-2"
+                      />
+
+                      Nueva captura
+
+                    </CButton>
+
+
+                    <CButton
+
+                      color="secondary"
+
+                      variant="outline"
+
+                      onClick={
+                        abrirSelector
+                      }
+
+                    >
+
+                      <CIcon
+                        icon={
+                          cilFolderOpen
+                        }
+                        className="me-2"
+                      />
+
+                      Otra imagen
+
+                    </CButton>
 
                   </div>
 
 
-                  <h4>
-                    Cámara preparada
-                  </h4>
+                  {/* =============================================
+                      OCR SE ACTIVA EN PASO 3
+                      ============================================= */}
+
+                  <CButton
+
+                    color="success"
+
+                    className="w-100 mt-2"
+
+                    disabled
+
+                  >
+
+                    Detectar placa
+
+                  </CButton>
 
 
-                  <p>
+                  <div
+                    className="
+                      text-center
+                      text-body-secondary
+                      mt-2
+                    "
+                    style={{
+                      fontSize:
+                        10,
+                    }}
+                  >
 
-                    Aquí aparecerá la vista previa
-                    de la cámara o la fotografía
-                    seleccionada para realizar
-                    el reconocimiento.
+                    El reconocimiento OCR
+                    se habilitará en el siguiente paso.
 
-                  </p>
+                  </div>
 
-                </div>
+                </>
 
-              </div>
-
-
-              <div className="monitoreo-controles">
-
-                <CButton
-                  color="success"
-                  disabled
-                >
-                  Activar cámara
-                </CButton>
-
-
-                <CButton
-                  color="secondary"
-                  variant="outline"
-                  disabled
-                >
-                  Seleccionar imagen
-                </CButton>
-
-
-                <CButton
-                  color="success"
-                  className="monitoreo-detectar"
-                  disabled
-                >
-                  Detectar placa
-                </CButton>
-
-              </div>
+              )}
 
             </CCardBody>
 
@@ -651,7 +2296,7 @@ export default function MonitoreoEntrada() {
 
 
           {/* ===================================================
-              DERECHA
+              RESULTADO
               =================================================== */}
 
           <CCard className="monitoreo-entrada-card">
@@ -665,8 +2310,8 @@ export default function MonitoreoEntrada() {
 
               <div className="monitoreo-entrada-card-subtitulo">
 
-                Información obtenida mediante
-                el servicio OCR y Supabase.
+                Resultado de la detección OCR
+                y consulta de vehículo registrado.
 
               </div>
 
@@ -689,17 +2334,23 @@ export default function MonitoreoEntrada() {
 
 
                 <h4>
-                  Esperando una imagen
+
+                  {
+                    imagen
+                      ? 'Imagen preparada'
+                      : 'Esperando una imagen'
+                  }
+
                 </h4>
 
 
                 <p>
 
-                  Captura una fotografía o
-                  selecciona una imagen del
-                  vehículo. Después podrás
-                  procesarla para reconocer
-                  automáticamente la placa.
+                  {
+                    imagen
+                      ? 'La fotografía está lista. En el siguiente paso conectaremos el servicio OCR para reconocer automáticamente la placa.'
+                      : 'Captura una fotografía o selecciona una imagen del vehículo para continuar.'
+                  }
 
                 </p>
 
@@ -715,7 +2366,13 @@ export default function MonitoreoEntrada() {
                   </span>
 
                   <span className="monitoreo-dato-valor">
-                    —
+
+                    {
+                      imagen
+                        ? 'Imagen lista'
+                        : '—'
+                    }
+
                   </span>
 
                 </div>
