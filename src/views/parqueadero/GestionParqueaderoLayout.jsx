@@ -3,75 +3,152 @@ import {
   Outlet,
 } from 'react-router-dom'
 
-import CIcon from '@coreui/icons-react'
+import CIcon
+  from '@coreui/icons-react'
 
 import {
+  cilCamera,
   cilCarAlt,
   cilList,
   cilSpeedometer,
   cilUser,
 } from '@coreui/icons'
 
+import {
+  useAuth,
+} from '../../context/AuthContext'
+
 
 const opciones = [
   {
-    titulo: 'Vehículos',
-    ruta: '/parqueadero/vehiculos',
-    icono: cilCarAlt,
+    titulo:
+      'Vehículos',
+
+    ruta:
+      '/parqueadero/vehiculos',
+
+    icono:
+      cilCarAlt,
   },
 
   {
-    titulo: 'Puestos',
-    ruta: '/parqueadero/puestos',
-    icono: cilSpeedometer,
+    titulo:
+      'Monitoreo de entrada',
+
+    ruta:
+      '/parqueadero/monitoreo-entrada',
+
+    icono:
+      cilCamera,
+
+    soloAdmin:
+      true,
   },
 
   {
-    titulo: 'Propietarios',
-    ruta: '/parqueadero/propietarios',
-    icono: cilUser,
+    titulo:
+      'Puestos',
+
+    ruta:
+      '/parqueadero/puestos',
+
+    icono:
+      cilSpeedometer,
   },
 
   {
-    titulo: 'Historial',
-    ruta: '/parqueadero/historial',
-    icono: cilList,
+    titulo:
+      'Propietarios',
+
+    ruta:
+      '/parqueadero/propietarios',
+
+    icono:
+      cilUser,
+  },
+
+  {
+    titulo:
+      'Historial',
+
+    ruta:
+      '/parqueadero/historial',
+
+    icono:
+      cilList,
   },
 ]
 
 
 export default function GestionParqueaderoLayout() {
+  const {
+    puedeAdministrar,
+  } =
+    useAuth()
+
+
+  const opcionesVisibles =
+    opciones.filter(
+      (
+        opcion,
+      ) => {
+
+        if (
+          opcion.soloAdmin
+        ) {
+          return (
+            puedeAdministrar
+          )
+        }
+
+
+        return true
+      },
+    )
+
+
   return (
     <>
+
       <style>{`
 
         /* =====================================================
            CONTENEDOR GENERAL
-
-           Sacamos este módulo del límite de 1200px de app-main.
-           Así aprovechamos casi todo el ancho real del monitor.
            ===================================================== */
 
         .gestion-parqueadero {
-          width: calc(100vw - 36px);
-          max-width: 1500px;
+          width:
+            calc(100vw - 36px);
 
-          position: relative;
+          max-width:
+            1500px;
 
-          left: 50%;
-          transform: translateX(-50%);
+          position:
+            relative;
 
-          display: grid;
+          left:
+            50%;
+
+          transform:
+            translateX(-50%);
+
+          display:
+            grid;
 
           grid-template-columns:
             195px minmax(0, 1fr);
 
-          align-items: start;
+          align-items:
+            start;
 
-          gap: 16px;
+          gap:
+            16px;
 
-          margin-top: 4px;
-          margin-bottom: 28px;
+          margin-top:
+            4px;
+
+          margin-bottom:
+            28px;
         }
 
 
@@ -80,9 +157,11 @@ export default function GestionParqueaderoLayout() {
            ===================================================== */
 
         .gestion-sidebar {
-          width: 100%;
+          width:
+            100%;
 
-          overflow: hidden;
+          overflow:
+            hidden;
 
           border:
             1px solid #dfe7ed;
@@ -95,22 +174,33 @@ export default function GestionParqueaderoLayout() {
 
           box-shadow:
             0 5px 18px
-            rgba(15, 23, 42, 0.06);
+            rgba(
+              15,
+              23,
+              42,
+              0.06
+            );
 
-          position: sticky;
+          position:
+            sticky;
 
-          top: 88px;
+          top:
+            88px;
         }
 
 
         .gestion-sidebar-header {
-          min-height: 54px;
+          min-height:
+            54px;
 
-          display: flex;
+          display:
+            flex;
 
-          align-items: center;
+          align-items:
+            center;
 
-          gap: 11px;
+          gap:
+            11px;
 
           padding:
             0 14px;
@@ -273,7 +363,7 @@ export default function GestionParqueaderoLayout() {
 
 
         /* =====================================================
-           CONTENIDO DERECHO
+           CONTENIDO
            ===================================================== */
 
         .gestion-contenido {
@@ -284,11 +374,6 @@ export default function GestionParqueaderoLayout() {
             100%;
         }
 
-
-        /*
-         * Hacemos que las tarjetas aprovechen
-         * absolutamente todo el espacio disponible.
-         */
 
         .gestion-contenido > * {
           width:
@@ -308,10 +393,6 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           CABECERA DE LAS TARJETAS
-           ===================================================== */
-
         .gestion-contenido .card-header {
           padding:
             10px 14px;
@@ -325,10 +406,7 @@ export default function GestionParqueaderoLayout() {
 
 
         /* =====================================================
-           TABLAS MÁS COMPACTAS
-
-           Aquí está la parte que hará que aparezcan
-           Estado + Acciones sin tener que bajar el zoom.
+           TABLAS
            ===================================================== */
 
         .gestion-contenido .table {
@@ -365,9 +443,7 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           1 - FOTO VEHÍCULO
-           ===================================================== */
+        /* FOTO VEHÍCULO */
 
         .gestion-contenido
         .table th:nth-child(1) {
@@ -385,11 +461,6 @@ export default function GestionParqueaderoLayout() {
             75px;
         }
 
-
-        /*
-         * La imagen original mide 90 x 60.
-         * Visualmente sigue viéndose bien en 68 x 46.
-         */
 
         .gestion-contenido
         .table td:nth-child(1) img {
@@ -410,10 +481,6 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /*
-         * También reduce el cuadro "Sin foto".
-         */
-
         .gestion-contenido
         .table td:nth-child(1) > div {
           width:
@@ -427,12 +494,11 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           2 - PLACA
-           ===================================================== */
+        /* PLACA */
 
         .gestion-contenido
         .table th:nth-child(2),
+
         .gestion-contenido
         .table td:nth-child(2) {
           width:
@@ -444,7 +510,8 @@ export default function GestionParqueaderoLayout() {
 
 
         .gestion-contenido
-        .table td:nth-child(2) .badge {
+        .table td:nth-child(2)
+        .badge {
           font-size:
             11px;
 
@@ -453,12 +520,11 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           3 - VEHÍCULO
-           ===================================================== */
+        /* VEHÍCULO */
 
         .gestion-contenido
         .table th:nth-child(3),
+
         .gestion-contenido
         .table td:nth-child(3) {
           width:
@@ -466,12 +532,11 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           4 - AÑO / COLOR
-           ===================================================== */
+        /* AÑO / COLOR */
 
         .gestion-contenido
         .table th:nth-child(4),
+
         .gestion-contenido
         .table td:nth-child(4) {
           width:
@@ -479,12 +544,7 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           5 - PROPIETARIO
-
-           En ListaVehiculos actualmente existe minWidth: 260.
-           Aquí lo sobrescribimos.
-           ===================================================== */
+        /* PROPIETARIO */
 
         .gestion-contenido
         .table th:nth-child(5) {
@@ -506,11 +566,6 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /*
-         * Foto circular del propietario:
-         * 52px -> 40px.
-         */
-
         .gestion-contenido
         .table td:nth-child(5) img {
           width:
@@ -523,10 +578,6 @@ export default function GestionParqueaderoLayout() {
             40px !important;
         }
 
-
-        /*
-         * Reduce el espacio entre foto y nombre.
-         */
 
         .gestion-contenido
         .table td:nth-child(5)
@@ -555,12 +606,11 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           6 - CÉDULA
-           ===================================================== */
+        /* CÉDULA */
 
         .gestion-contenido
         .table th:nth-child(6),
+
         .gestion-contenido
         .table td:nth-child(6) {
           width:
@@ -574,9 +624,7 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           7 - CORREO
-           ===================================================== */
+        /* CORREO */
 
         .gestion-contenido
         .table th:nth-child(7) {
@@ -604,12 +652,11 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           8 - ESTADO
-           ===================================================== */
+        /* ESTADO */
 
         .gestion-contenido
         .table th:nth-child(8),
+
         .gestion-contenido
         .table td:nth-child(8) {
           width:
@@ -634,12 +681,11 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           9 - ACCIONES
-           ===================================================== */
+        /* ACCIONES */
 
         .gestion-contenido
         .table th:nth-child(9),
+
         .gestion-contenido
         .table td:nth-child(9) {
           width:
@@ -652,13 +698,6 @@ export default function GestionParqueaderoLayout() {
             center;
         }
 
-
-        /*
-         * Si Editar y Eliminar están dentro de un flex,
-         * los colocamos uno debajo del otro.
-         *
-         * Esto ahorra bastante espacio horizontal.
-         */
 
         .gestion-contenido
         .table td:nth-child(9)
@@ -694,13 +733,6 @@ export default function GestionParqueaderoLayout() {
         }
 
 
-        /* =====================================================
-           TABLE RESPONSIVE
-
-           Solo aparecerá scrollbar en pantallas realmente
-           pequeñas, no debería necesitarse a 1366px / 100%.
-           ===================================================== */
-
         .gestion-contenido
         .table-responsive {
           width:
@@ -715,7 +747,7 @@ export default function GestionParqueaderoLayout() {
 
 
         /* =====================================================
-           BOTONES SUPERIORES
+           BOTONES
            ===================================================== */
 
         .gestion-contenido
@@ -743,7 +775,7 @@ export default function GestionParqueaderoLayout() {
 
 
         /* =====================================================
-           LAPTOPS / PANTALLAS MEDIANAS
+           PANTALLAS MEDIANAS
            ===================================================== */
 
         @media (
@@ -752,10 +784,15 @@ export default function GestionParqueaderoLayout() {
 
           .gestion-parqueadero {
             width:
-              calc(100vw - 24px);
+              calc(
+                100vw - 24px
+              );
 
             grid-template-columns:
-              175px minmax(0, 1fr);
+              175px minmax(
+                0,
+                1fr
+              );
 
             gap:
               12px;
@@ -780,6 +817,7 @@ export default function GestionParqueaderoLayout() {
 
           .gestion-contenido
           .table th,
+
           .gestion-contenido
           .table td {
             padding:
@@ -791,8 +829,6 @@ export default function GestionParqueaderoLayout() {
 
         /* =====================================================
            TABLET
-
-           Aquí sí convertimos el menú lateral en menú horizontal.
            ===================================================== */
 
         @media (
@@ -823,14 +859,23 @@ export default function GestionParqueaderoLayout() {
           }
 
 
+          /*
+           * auto-fit permite que el menú
+           * funcione tanto con cuatro como
+           * con cinco opciones.
+           */
+
           .gestion-sidebar-nav {
             display:
               grid;
 
             grid-template-columns:
               repeat(
-                4,
-                minmax(0, 1fr)
+                auto-fit,
+                minmax(
+                  115px,
+                  1fr
+                )
               );
           }
 
@@ -900,7 +945,7 @@ export default function GestionParqueaderoLayout() {
       <div className="gestion-parqueadero">
 
         {/* =====================================================
-            MENÚ IZQUIERDO
+            MENÚ
             ===================================================== */}
 
         <aside className="gestion-sidebar">
@@ -921,12 +966,13 @@ export default function GestionParqueaderoLayout() {
 
           <nav className="gestion-sidebar-nav">
 
-            {opciones.map(
+            {opcionesVisibles.map(
               (
                 opcion,
               ) => (
 
                 <NavLink
+
                   key={
                     opcion.ruta
                   }
@@ -944,6 +990,7 @@ export default function GestionParqueaderoLayout() {
                         : ''
                     }`
                   }
+
                 >
 
                   <span className="gestion-sidebar-link-icon">
@@ -984,6 +1031,7 @@ export default function GestionParqueaderoLayout() {
         </section>
 
       </div>
+
     </>
   )
 }

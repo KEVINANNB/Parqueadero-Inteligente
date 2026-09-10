@@ -30,9 +30,7 @@ import {
 
 
 /* ================================================================
-   CARGA DIFERIDA DE PÁGINAS
-
-   Cada módulo se descargará cuando realmente sea necesario.
+   PÁGINAS
    ================================================================ */
 
 const Inicio =
@@ -85,6 +83,15 @@ const ListaVehiculos =
     () =>
       import(
         './views/parqueadero/ListaVehiculos'
+      ),
+  )
+
+
+const MonitoreoEntrada =
+  lazy(
+    () =>
+      import(
+        './views/parqueadero/MonitoreoEntrada'
       ),
   )
 
@@ -153,11 +160,12 @@ const MisVehiculos =
 
 
 /* ================================================================
-   LOADER DE RUTA
+   LOADER
    ================================================================ */
 
 function CargandoRuta() {
   return (
+
     <div
       style={{
         minHeight:
@@ -178,21 +186,22 @@ function CargandoRuta() {
         />
 
 
-        <div
-          className="mt-3 text-body-secondary"
-        >
+        <div className="mt-3 text-body-secondary">
+
           Cargando módulo...
+
         </div>
 
       </div>
 
     </div>
+
   )
 }
 
 
 /* ================================================================
-   CONTENIDO PRINCIPAL
+   APLICACIÓN
    ================================================================ */
 
 function AplicacionAutenticada({
@@ -200,47 +209,36 @@ function AplicacionAutenticada({
   autenticado,
 }) {
   return (
+
     <div
+
       className={
         esPaginaAuth
           ? 'app-shell app-shell-auth'
           : 'app-shell'
       }
-    >
 
-      {/* =====================================================
-          HEADER
-          ===================================================== */}
+    >
 
       {!esPaginaAuth && (
         <AppHeader />
       )}
 
 
-      {/* =====================================================
-          MAIN
-          ===================================================== */}
-
       <main
+
         className={
           esPaginaAuth
             ? 'app-main-auth'
             : 'app-main'
         }
-      >
 
-        {/* ===================================================
-            BREADCRUMB
-            =================================================== */}
+      >
 
         {!esPaginaAuth && (
           <AppBreadcrumb />
         )}
 
-
-        {/* ===================================================
-            RUTAS
-            =================================================== */}
 
         <Suspense
           fallback={
@@ -250,9 +248,7 @@ function AplicacionAutenticada({
 
           <Routes>
 
-            {/* ===============================================
-                INICIO
-                =============================================== */}
+            {/* INICIO */}
 
             <Route
               path="/"
@@ -262,9 +258,7 @@ function AplicacionAutenticada({
             />
 
 
-            {/* ===============================================
-                PARQUEADERO
-                =============================================== */}
+            {/* PARQUEADERO */}
 
             <Route
               path="/estacionamiento"
@@ -282,9 +276,7 @@ function AplicacionAutenticada({
             />
 
 
-            {/* ===============================================
-                MAPA
-                =============================================== */}
+            {/* MAPA */}
 
             <Route
               path="/parqueadero/mapa"
@@ -294,118 +286,163 @@ function AplicacionAutenticada({
             />
 
 
-            {/* ===============================================
-                GESTIÓN
-                =============================================== */}
+            {/* GESTIÓN */}
 
             <Route
+
               path="/parqueadero"
+
               element={
                 <GestionParqueaderoLayout />
               }
+
             >
 
               <Route
+
                 index
+
                 element={
+
                   <Navigate
                     to="vehiculos"
                     replace
                   />
+
                 }
+
               />
 
 
               <Route
+
                 path="vehiculos"
+
                 element={
                   <ListaVehiculos />
                 }
+
+              />
+
+
+              {/* NUEVO MÓDULO */}
+
+              <Route
+
+                path="monitoreo-entrada"
+
+                element={
+                  <MonitoreoEntrada />
+                }
+
               />
 
 
               <Route
+
                 path="puestos"
+
                 element={
                   <PuestosGestion />
                 }
+
               />
 
 
               <Route
+
                 path="propietarios"
+
                 element={
                   <Propietarios />
                 }
+
               />
 
 
               <Route
+
                 path="historial"
+
                 element={
                   <HistorialParqueadero />
                 }
+
               />
 
             </Route>
 
 
-            {/* ===============================================
-                CUENTA
-                =============================================== */}
+            {/* CUENTA */}
 
             <Route
+
               path="/cuenta/perfil"
+
               element={
                 <MiPerfil />
               }
+
             />
 
 
             <Route
+
               path="/cuenta/vehiculos"
+
               element={
                 <MisVehiculos />
               }
+
             />
 
 
-            {/* ===============================================
-                LOGIN
-                =============================================== */}
+            {/* AUTENTICACIÓN */}
 
             <Route
+
               path="/login"
+
               element={
                 <Login />
               }
+
             />
 
 
             <Route
+
               path="/registro"
+
               element={
                 <Registro />
               }
+
             />
 
 
-            {/* ===============================================
-                404
-                =============================================== */}
+            {/* 404 */}
 
             <Route
+
               path="*"
+
               element={
+
                 <Navigate
+
                   to={
                     autenticado
                       ? '/'
                       : '/login'
                   }
+
                   replace
+
                 />
+
               }
+
             />
 
           </Routes>
@@ -415,18 +452,16 @@ function AplicacionAutenticada({
       </main>
 
 
-      {/* =====================================================
-          FOOTER
-          ===================================================== */}
-
       {!esPaginaAuth && (
 
         <footer className="app-footer">
 
           <p>
+
             UTEQ · Aplicaciones
             Telemáticas Basadas en Web
             · Smart Parking UTEQ
+
           </p>
 
         </footer>
@@ -434,12 +469,13 @@ function AplicacionAutenticada({
       )}
 
     </div>
+
   )
 }
 
 
 /* ================================================================
-   APP
+   APP PRINCIPAL
    ================================================================ */
 
 export default function App() {
@@ -456,31 +492,40 @@ export default function App() {
 
   const esPaginaAuth =
     ubicacion.pathname ===
-    '/login'
+      '/login'
+
     ||
+
     ubicacion.pathname ===
-    '/registro'
+      '/registro'
 
 
   /* ==============================================================
-     PROTEGER RUTAS
+     RECUPERAR SESIÓN ANTES DE REDIRECCIONAR
      ============================================================== */
+
   if (
     cargando
   ) {
     return (
+
       <div
         style={{
-          minHeight: '100vh',
-          display: 'grid',
-          placeItems: 'center',
-          background: '#ffffff',
+          minHeight:
+            '100vh',
+
+          display:
+            'grid',
+
+          placeItems:
+            'center',
+
+          background:
+            '#ffffff',
         }}
       >
 
-        <div
-          className="text-center"
-        >
+        <div className="text-center">
 
           <CSpinner
             color="success"
@@ -503,51 +548,63 @@ export default function App() {
         </div>
 
       </div>
+
     )
   }
+
+
+  /* ==============================================================
+     PROTEGER RUTAS
+     ============================================================== */
+
   if (
     !autenticado &&
     !esPaginaAuth
   ) {
     return (
+
       <Navigate
         to="/login"
         replace
       />
+
     )
   }
 
 
   /* ==============================================================
      LOGIN / REGISTRO
-
-     No necesitamos ParkingProvider aquí.
      ============================================================== */
 
   if (
     esPaginaAuth
   ) {
     return (
+
       <AplicacionAutenticada
+
         esPaginaAuth
+
         autenticado={
           autenticado
         }
+
       />
+
     )
   }
 
 
   /* ==============================================================
-     APLICACIÓN AUTENTICADA
-
-     El provider permanece montado al cambiar de página.
+     APP AUTENTICADA
      ============================================================== */
 
   return (
+
     <ParkingProvider>
 
       <AplicacionAutenticada
+
         esPaginaAuth={
           false
         }
@@ -555,8 +612,10 @@ export default function App() {
         autenticado={
           autenticado
         }
+
       />
 
     </ParkingProvider>
+
   )
 }

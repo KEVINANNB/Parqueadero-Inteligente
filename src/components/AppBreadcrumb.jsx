@@ -4,10 +4,6 @@ import {
 } from 'react-router-dom'
 
 
-/* ================================================================
-   OBTENER LA RUTA DE NAVEGACIÓN
-   ================================================================ */
-
 function obtenerBreadcrumb(
   pathname,
 ) {
@@ -37,7 +33,7 @@ function obtenerBreadcrumb(
 
 
   /* ==============================================================
-     DETALLE DE UN ESPACIO
+     DETALLE
      ============================================================== */
 
   if (
@@ -115,6 +111,39 @@ function obtenerBreadcrumb(
       {
         label:
           'Vehículos y propietarios',
+      },
+    ]
+  }
+
+
+  /* ==============================================================
+     MONITOREO
+     ============================================================== */
+
+  if (
+    pathname ===
+    '/parqueadero/monitoreo-entrada'
+  ) {
+    return [
+      {
+        label:
+          'Inicio',
+
+        to:
+          '/',
+      },
+
+      {
+        label:
+          'Vehículos y propietarios',
+
+        to:
+          '/parqueadero/vehiculos',
+      },
+
+      {
+        label:
+          'Monitoreo de entrada',
       },
     ]
   }
@@ -269,21 +298,9 @@ function obtenerBreadcrumb(
   }
 
 
-  /*
-   * No mostramos breadcrumb:
-   *
-   * /
-   * /login
-   * /registro
-   */
-
   return null
 }
 
-
-/* ================================================================
-   COMPONENTE
-   ================================================================ */
 
 export default function AppBreadcrumb() {
   const ubicacion =
@@ -303,70 +320,77 @@ export default function AppBreadcrumb() {
   }
 
 
-  /*
-   * El módulo administrativo ocupa
-   * prácticamente todo el ancho del monitor.
-   *
-   * Hacemos que el breadcrumb respete
-   * ese mismo ancho.
-   */
-
   const esGestion =
     ubicacion.pathname ===
       '/parqueadero/vehiculos'
+
     ||
+
+    ubicacion.pathname ===
+      '/parqueadero/monitoreo-entrada'
+
+    ||
+
     ubicacion.pathname ===
       '/parqueadero/puestos'
+
     ||
+
     ubicacion.pathname ===
       '/parqueadero/propietarios'
+
     ||
+
     ubicacion.pathname ===
       '/parqueadero/historial'
 
 
   return (
     <>
+
       <style>{`
 
-        /* =====================================================
-           BREADCRUMB GENERAL
-           ===================================================== */
-
         .smart-breadcrumb {
-          width: 100%;
+          width:
+            100%;
 
-          min-height: 42px;
+          min-height:
+            42px;
 
-          display: flex;
+          display:
+            flex;
 
-          align-items: center;
+          align-items:
+            center;
 
-          margin-bottom: 14px;
+          margin-bottom:
+            14px;
 
-          padding-top: 7px;
-          padding-bottom: 7px;
+          padding-top:
+            7px;
+
+          padding-bottom:
+            7px;
 
           border-bottom:
             1px solid #e5e7eb;
 
-          font-size: 11px;
+          font-size:
+            11px;
 
-          line-height: 1.2;
+          line-height:
+            1.2;
 
-          color: #6b7280;
+          color:
+            #6b7280;
         }
 
 
-        /* =====================================================
-           MÓDULO DE VEHÍCULOS
-
-           Coincide con el ancho del menú lateral.
-           ===================================================== */
-
         .smart-breadcrumb-wide {
           width:
-            calc(100vw - 36px);
+            calc(
+              100vw - 36px
+            );
 
           max-width:
             1500px;
@@ -381,10 +405,6 @@ export default function AppBreadcrumb() {
             translateX(-50%);
         }
 
-
-        /* =====================================================
-           CONTENIDO
-           ===================================================== */
 
         .smart-breadcrumb-inner {
           display:
@@ -403,10 +423,6 @@ export default function AppBreadcrumb() {
             100%;
         }
 
-
-        /* =====================================================
-           ENLACE
-           ===================================================== */
 
         .smart-breadcrumb-link {
           color:
@@ -432,10 +448,6 @@ export default function AppBreadcrumb() {
         }
 
 
-        /* =====================================================
-           SEPARADOR
-           ===================================================== */
-
         .smart-breadcrumb-separator {
           color:
             #94a3b8;
@@ -445,19 +457,11 @@ export default function AppBreadcrumb() {
         }
 
 
-        /* =====================================================
-           POSICIÓN ACTUAL
-           ===================================================== */
-
         .smart-breadcrumb-current {
           color:
             #64748b;
         }
 
-
-        /* =====================================================
-           RESPONSIVE
-           ===================================================== */
 
         @media (
           max-width: 1200px
@@ -465,7 +469,9 @@ export default function AppBreadcrumb() {
 
           .smart-breadcrumb-wide {
             width:
-              calc(100vw - 24px);
+              calc(
+                100vw - 24px
+              );
           }
 
         }
@@ -504,6 +510,7 @@ export default function AppBreadcrumb() {
 
 
       <nav
+
         className={
           esGestion
             ? 'smart-breadcrumb smart-breadcrumb-wide'
@@ -511,6 +518,7 @@ export default function AppBreadcrumb() {
         }
 
         aria-label="Miga de pan"
+
       >
 
         <div className="smart-breadcrumb-inner">
@@ -523,11 +531,14 @@ export default function AppBreadcrumb() {
 
               const ultimo =
                 indice ===
-                elementos.length - 1
+                elementos.length -
+                  1
 
 
               return (
+
                 <span
+
                   key={
                     `${elemento.label}-${indice}`
                   }
@@ -542,25 +553,26 @@ export default function AppBreadcrumb() {
                     gap:
                       7,
                   }}
-                >
 
-                  {/* ===========================================
-                      ENLACE
-                      =========================================== */}
+                >
 
                   {!ultimo &&
                   elemento.to ? (
 
                     <Link
+
                       to={
                         elemento.to
                       }
 
                       className="smart-breadcrumb-link"
+
                     >
+
                       {
                         elemento.label
                       }
+
                     </Link>
 
                   ) : (
@@ -576,28 +588,25 @@ export default function AppBreadcrumb() {
                   )}
 
 
-                  {/* ===========================================
-                      /
-                      =========================================== */}
-
                   {!ultimo && (
 
                     <span className="smart-breadcrumb-separator">
-
                       /
-
                     </span>
 
                   )}
 
                 </span>
+
               )
+
             },
           )}
 
         </div>
 
       </nav>
+
     </>
   )
 }
