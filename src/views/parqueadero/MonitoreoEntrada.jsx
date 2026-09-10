@@ -18,8 +18,7 @@ import {
   CSpinner,
 } from '@coreui/react'
 
-import CIcon
-  from '@coreui/icons-react'
+import CIcon from '@coreui/icons-react'
 
 import {
   cilCamera,
@@ -137,22 +136,6 @@ export default function MonitoreoEntrada() {
 
 
   /* ==============================================================
-     SEGURIDAD
-     ============================================================== */
-
-  if (
-    !puedeAdministrar
-  ) {
-    return (
-      <Navigate
-        to="/parqueadero/vehiculos"
-        replace
-      />
-    )
-  }
-
-
-  /* ==============================================================
      LIBERAR URL TEMPORAL
      ============================================================== */
 
@@ -162,12 +145,14 @@ export default function MonitoreoEntrada() {
       if (
         urlTemporalRef.current
       ) {
+
         URL.revokeObjectURL(
           urlTemporalRef.current,
         )
 
         urlTemporalRef.current =
           null
+
       }
 
     }
@@ -210,19 +195,114 @@ export default function MonitoreoEntrada() {
       if (
         videoRef.current
       ) {
+
         videoRef.current.srcObject =
           null
+
       }
 
 
       setCamaraActiva(
         false,
       )
+
     }
 
 
   /* ==============================================================
-     LIMPIEZA AL SALIR DE LA PÁGINA
+     CONECTAR STREAM AL ELEMENTO <VIDEO>
+
+     IMPORTANTE:
+
+     React primero necesita renderizar el <video>.
+     Después de eso podemos asignar streamRef.current
+     al srcObject.
+
+     Esta es la corrección del problema donde solamente
+     aparecía el fondo oscuro sin imagen en vivo.
+     ============================================================== */
+
+  useEffect(
+    () => {
+
+      if (
+        !camaraActiva
+      ) {
+        return undefined
+      }
+
+
+      const video =
+        videoRef.current
+
+      const stream =
+        streamRef.current
+
+
+      if (
+        !video ||
+        !stream
+      ) {
+        return undefined
+      }
+
+
+      video.srcObject =
+        stream
+
+
+      const reproducir =
+        async () => {
+
+          try {
+
+            await video.play()
+
+          } catch (
+            err
+          ) {
+
+            console.error(
+              'Error reproduciendo cámara:',
+              err,
+            )
+
+
+            setError(
+              'La cámara fue activada, pero el navegador no pudo mostrar la imagen en vivo.',
+            )
+
+          }
+
+        }
+
+
+      reproducir()
+
+
+      return () => {
+
+        if (
+          video.srcObject ===
+          stream
+        ) {
+
+          video.srcObject =
+            null
+
+        }
+
+      }
+
+    },
+    [
+      camaraActiva,
+    ],
+  )
+
+
+  /* ==============================================================
+     LIMPIEZA AL SALIR DEL COMPONENTE
      ============================================================== */
 
   useEffect(
@@ -253,6 +333,10 @@ export default function MonitoreoEntrada() {
         }
 
 
+        streamRef.current =
+          null
+
+
         if (
           urlTemporalRef.current
         ) {
@@ -260,6 +344,9 @@ export default function MonitoreoEntrada() {
           URL.revokeObjectURL(
             urlTemporalRef.current,
           )
+
+          urlTemporalRef.current =
+            null
 
         }
 
@@ -317,6 +404,7 @@ export default function MonitoreoEntrada() {
       setError(
         '',
       )
+
     }
 
 
@@ -343,7 +431,7 @@ export default function MonitoreoEntrada() {
       try {
 
         /* ========================================================
-           COMPROBAR SOPORTE DEL NAVEGADOR
+           COMPROBAR SOPORTE
            ======================================================== */
 
         if (
@@ -359,7 +447,7 @@ export default function MonitoreoEntrada() {
 
 
         /* ========================================================
-           SI HABÍA UNA CÁMARA ABIERTA, LA CERRAMOS
+           CERRAR STREAM ANTERIOR
            ======================================================== */
 
         detenerCamara()
@@ -368,8 +456,8 @@ export default function MonitoreoEntrada() {
         /* ========================================================
            SOLICITAR CÁMARA
 
-           facingMode environment:
-           preferencia por cámara posterior en móviles.
+           environment = preferencia por cámara posterior
+           en teléfonos y tablets.
            ======================================================== */
 
         const stream =
@@ -402,22 +490,21 @@ export default function MonitoreoEntrada() {
             })
 
 
+        /*
+         * Guardamos primero el stream.
+         */
+
         streamRef.current =
           stream
 
 
-        if (
-          videoRef.current
-        ) {
-
-          videoRef.current.srcObject =
-            stream
-
-
-          await videoRef.current.play()
-
-        }
-
+        /*
+         * Ahora hacemos que React renderice
+         * el elemento <video>.
+         *
+         * El useEffect anterior será quien
+         * conecte el stream al video.
+         */
 
         setCamaraActiva(
           true,
@@ -448,7 +535,7 @@ export default function MonitoreoEntrada() {
         ) {
 
           texto =
-            'El navegador no tiene permiso para utilizar la cámara. Permite el acceso a la cámara y vuelve a intentarlo.'
+            'El navegador no tiene permiso para utilizar la cámara. Permite el acceso y vuelve a intentarlo.'
 
         } else if (
           err?.name ===
@@ -473,6 +560,14 @@ export default function MonitoreoEntrada() {
 
           texto =
             'La cámara encontrada no admite la configuración solicitada.'
+
+        } else if (
+          err?.name ===
+          'SecurityError'
+        ) {
+
+          texto =
+            'El navegador bloqueó el acceso a la cámara por motivos de seguridad.'
 
         } else if (
           err?.message
@@ -537,6 +632,7 @@ export default function MonitoreoEntrada() {
         )
 
         return
+
       }
 
 
@@ -550,13 +646,14 @@ export default function MonitoreoEntrada() {
         )
 
         return
+
       }
 
 
       try {
 
         /* ========================================================
-           AJUSTAR CANVAS A LA RESOLUCIÓN REAL
+           AJUSTAR CANVAS
            ======================================================== */
 
         canvas.width =
@@ -583,6 +680,10 @@ export default function MonitoreoEntrada() {
         }
 
 
+        /* ========================================================
+           COPIAR FOTOGRAMA
+           ======================================================== */
+
         contexto.drawImage(
           video,
           0,
@@ -594,9 +695,6 @@ export default function MonitoreoEntrada() {
 
         /* ========================================================
            CANVAS -> BLOB JPEG
-
-           Este Blob será el que después enviaremos
-           directamente al endpoint OCR.
            ======================================================== */
 
         const blob =
@@ -642,6 +740,10 @@ export default function MonitoreoEntrada() {
           )
 
 
+        /* ========================================================
+           VALIDAR TAMAÑO
+           ======================================================== */
+
         if (
           blob.size >
           TAMANO_MAXIMO
@@ -652,8 +754,13 @@ export default function MonitoreoEntrada() {
           )
 
           return
+
         }
 
+
+        /* ========================================================
+           GENERAR NOMBRE
+           ======================================================== */
 
         const fecha =
           new Date()
@@ -661,6 +768,14 @@ export default function MonitoreoEntrada() {
 
         const nombre =
           `captura-vehiculo-${fecha.getTime()}.jpg`
+
+
+        /*
+         * Después de capturar la fotografía
+         * apagamos la cámara.
+         */
+
+        detenerCamara()
 
 
         establecerImagen(
@@ -718,7 +833,7 @@ export default function MonitoreoEntrada() {
 
 
   /* ==============================================================
-     SELECCIONAR IMAGEN DESDE PC / MÓVIL
+     SELECCIONAR IMAGEN
      ============================================================== */
 
   const seleccionarImagen =
@@ -749,7 +864,7 @@ export default function MonitoreoEntrada() {
 
 
       /* ========================================================
-         VALIDAR TIPO
+         VALIDAR FORMATO
          ======================================================== */
 
       if (
@@ -767,6 +882,7 @@ export default function MonitoreoEntrada() {
           ''
 
         return
+
       }
 
 
@@ -788,15 +904,20 @@ export default function MonitoreoEntrada() {
           ''
 
         return
+
       }
 
 
       /* ========================================================
-         SI LA CÁMARA ESTÁ ABIERTA, PODEMOS CERRARLA
+         CERRAR CÁMARA
          ======================================================== */
 
       detenerCamara()
 
+
+      /* ========================================================
+         GUARDAR IMAGEN
+         ======================================================== */
 
       establecerImagen(
         archivo,
@@ -811,8 +932,8 @@ export default function MonitoreoEntrada() {
 
 
       /*
-       * Permite volver a seleccionar
-       * posteriormente el mismo archivo.
+       * Permite seleccionar nuevamente
+       * el mismo archivo.
        */
 
       evento.target.value =
@@ -835,24 +956,57 @@ export default function MonitoreoEntrada() {
         null,
       )
 
+
       setVistaPrevia(
         '',
       )
+
 
       setNombreImagen(
         '',
       )
 
+
       setOrigenImagen(
         '',
       )
+
 
       setMensaje(
         '',
       )
 
+
       setError(
         '',
+      )
+
+    }
+
+
+  /* ==============================================================
+     NUEVA CAPTURA
+     ============================================================== */
+
+  const nuevaCaptura =
+    () => {
+
+      descartarImagen()
+
+
+      /*
+       * Esperamos a que React retire
+       * la vista previa antes de iniciar
+       * nuevamente la cámara.
+       */
+
+      setTimeout(
+        () => {
+
+          activarCamara()
+
+        },
+        50,
       )
 
     }
@@ -878,7 +1032,8 @@ export default function MonitoreoEntrada() {
 
 
       if (
-        kb < 1024
+        kb <
+        1024
       ) {
 
         return (
@@ -890,12 +1045,38 @@ export default function MonitoreoEntrada() {
 
       return (
         `${(
-          kb / 1024
+          kb /
+          1024
         ).toFixed(2)} MB`
       )
 
     }
 
+
+  /* ==============================================================
+     SEGURIDAD DE LA VISTA
+
+     Se coloca después de los hooks para no romper
+     las reglas de hooks de React.
+     ============================================================== */
+
+  if (
+    !puedeAdministrar
+  ) {
+
+    return (
+      <Navigate
+        to="/parqueadero/vehiculos"
+        replace
+      />
+    )
+
+  }
+
+
+  /* ==============================================================
+     RENDER
+     ============================================================== */
 
   return (
     <>
@@ -907,8 +1088,7 @@ export default function MonitoreoEntrada() {
            ===================================================== */
 
         .monitoreo-entrada {
-          width:
-            100%;
+          width: 100%;
         }
 
 
@@ -917,74 +1097,38 @@ export default function MonitoreoEntrada() {
            ===================================================== */
 
         .monitoreo-entrada-encabezado {
-          display:
-            flex;
-
-          justify-content:
-            space-between;
-
-          align-items:
-            flex-start;
-
-          gap:
-            18px;
-
-          margin-bottom:
-            18px;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 18px;
+          margin-bottom: 18px;
         }
 
 
         .monitoreo-entrada-kicker {
-          margin-bottom:
-            4px;
-
-          color:
-            #159447;
-
-          font-size:
-            11px;
-
-          font-weight:
-            800;
-
-          letter-spacing:
-            .06em;
+          margin-bottom: 4px;
+          color: #159447;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: .06em;
         }
 
 
         .monitoreo-entrada-titulo {
-          margin:
-            0;
-
-          color:
-            #172033;
-
-          font-size:
-            27px;
-
-          font-weight:
-            700;
+          margin: 0;
+          color: #172033;
+          font-size: 27px;
+          font-weight: 700;
         }
 
 
         .monitoreo-entrada-descripcion {
-          max-width:
-            700px;
-
-          margin-top:
-            7px;
-
-          margin-bottom:
-            0;
-
-          color:
-            #687386;
-
-          font-size:
-            13px;
-
-          line-height:
-            1.5;
+          max-width: 700px;
+          margin-top: 7px;
+          margin-bottom: 0;
+          color: #687386;
+          font-size: 13px;
+          line-height: 1.5;
         }
 
 
@@ -993,27 +1137,20 @@ export default function MonitoreoEntrada() {
            ===================================================== */
 
         .monitoreo-entrada-grid {
-          display:
-            grid;
+          display: grid;
 
           grid-template-columns:
             minmax(0, 1.05fr)
             minmax(0, .95fr);
 
-          gap:
-            18px;
-
-          align-items:
-            stretch;
+          gap: 18px;
+          align-items: stretch;
         }
 
 
         .monitoreo-entrada-card {
-          height:
-            100%;
-
-          overflow:
-            hidden;
+          height: 100%;
+          overflow: hidden;
 
           border:
             1px solid #dfe5eb;
@@ -1024,10 +1161,8 @@ export default function MonitoreoEntrada() {
         }
 
 
-        .monitoreo-entrada-card
-        .card-header {
-          padding:
-            13px 16px;
+        .monitoreo-entrada-card .card-header {
+          padding: 13px 16px;
 
           background:
             #f7f9fb;
@@ -1038,8 +1173,7 @@ export default function MonitoreoEntrada() {
 
 
         .monitoreo-entrada-card-titulo {
-          margin:
-            0;
+          margin: 0;
 
           color:
             #172033;
@@ -1053,8 +1187,7 @@ export default function MonitoreoEntrada() {
 
 
         .monitoreo-entrada-card-subtitulo {
-          margin-top:
-            3px;
+          margin-top: 3px;
 
           color:
             #7a8594;
@@ -1065,15 +1198,13 @@ export default function MonitoreoEntrada() {
 
 
         /* =====================================================
-           CÁMARA
+           VISOR
            ===================================================== */
 
         .monitoreo-camara-marco {
-          position:
-            relative;
+          position: relative;
 
-          width:
-            100%;
+          width: 100%;
 
           aspect-ratio:
             16 / 9;
@@ -1109,17 +1240,12 @@ export default function MonitoreoEntrada() {
            ===================================================== */
 
         .monitoreo-video {
-          width:
-            100%;
+          position: absolute;
 
-          height:
-            100%;
+          inset: 0;
 
-          position:
-            absolute;
-
-          inset:
-            0;
+          width: 100%;
+          height: 100%;
 
           object-fit:
             cover;
@@ -1130,21 +1256,16 @@ export default function MonitoreoEntrada() {
 
 
         /* =====================================================
-           VISTA PREVIA
+           PREVIEW
            ===================================================== */
 
         .monitoreo-preview {
-          width:
-            100%;
+          position: absolute;
 
-          height:
-            100%;
+          inset: 0;
 
-          position:
-            absolute;
-
-          inset:
-            0;
+          width: 100%;
+          height: 100%;
 
           object-fit:
             contain;
@@ -1239,7 +1360,7 @@ export default function MonitoreoEntrada() {
 
 
         /* =====================================================
-           ETIQUETA SUPERIOR DE CÁMARA
+           LIVE
            ===================================================== */
 
         .monitoreo-live-badge {
@@ -1315,7 +1436,7 @@ export default function MonitoreoEntrada() {
 
 
         /* =====================================================
-           INFORMACIÓN DEL ARCHIVO
+           ARCHIVO
            ===================================================== */
 
         .monitoreo-archivo {
@@ -1431,14 +1552,8 @@ export default function MonitoreoEntrada() {
           gap:
             10px;
 
-          margin-bottom:
-            10px;
-        }
-
-
-        .monitoreo-detectar {
-          grid-column:
-            1 / -1;
+          margin-top:
+            14px;
         }
 
 
@@ -1484,7 +1599,7 @@ export default function MonitoreoEntrada() {
 
 
         /* =====================================================
-           RESULTADO VACÍO
+           RESULTADO
            ===================================================== */
 
         .monitoreo-resultado-vacio {
@@ -1578,7 +1693,7 @@ export default function MonitoreoEntrada() {
 
 
         /* =====================================================
-           DATOS RESULTADO
+           DATOS
            ===================================================== */
 
         .monitoreo-datos-espera {
@@ -1702,12 +1817,6 @@ export default function MonitoreoEntrada() {
           }
 
 
-          .monitoreo-detectar {
-            grid-column:
-              auto;
-          }
-
-
           .monitoreo-datos-espera {
             grid-template-columns:
               1fr;
@@ -1810,7 +1919,7 @@ export default function MonitoreoEntrada() {
 
 
         {/* =====================================================
-            DOS COLUMNAS
+            COLUMNAS
             ===================================================== */}
 
         <div className="monitoreo-entrada-grid">
@@ -1845,10 +1954,6 @@ export default function MonitoreoEntrada() {
                   ================================================= */}
 
               <div className="monitoreo-camara-marco">
-
-                {/* ===============================================
-                    IMAGEN CAPTURADA / SELECCIONADA
-                    =============================================== */}
 
                 {vistaPrevia ? (
 
@@ -1931,9 +2036,7 @@ export default function MonitoreoEntrada() {
               </div>
 
 
-              {/* =================================================
-                  CANVAS OCULTO
-                  ================================================= */}
+              {/* CANVAS OCULTO */}
 
               <canvas
 
@@ -1949,9 +2052,7 @@ export default function MonitoreoEntrada() {
               />
 
 
-              {/* =================================================
-                  INPUT OCULTO
-                  ================================================= */}
+              {/* INPUT ARCHIVO */}
 
               <input
 
@@ -1976,7 +2077,7 @@ export default function MonitoreoEntrada() {
 
 
               {/* =================================================
-                  INFORMACIÓN DE IMAGEN
+                  INFO IMAGEN
                   ================================================= */}
 
               {imagen && (
@@ -2034,7 +2135,7 @@ export default function MonitoreoEntrada() {
 
 
               {/* =================================================
-                  CONTROLES DE CÁMARA
+                  SIN CÁMARA / SIN FOTO
                   ================================================= */}
 
               {!camaraActiva &&
@@ -2118,7 +2219,7 @@ export default function MonitoreoEntrada() {
 
 
               {/* =================================================
-                  CÁMARA ACTIVA
+                  CÁMARA EN VIVO
                   ================================================= */}
 
               {camaraActiva &&
@@ -2177,7 +2278,7 @@ export default function MonitoreoEntrada() {
 
 
               {/* =================================================
-                  IMAGEN YA CAPTURADA
+                  FOTO CAPTURADA
                   ================================================= */}
 
               {vistaPrevia && (
@@ -2198,16 +2299,7 @@ export default function MonitoreoEntrada() {
                       variant="outline"
 
                       onClick={
-                        () => {
-
-                          descartarImagen()
-
-                          setTimeout(
-                            activarCamara,
-                            0,
-                          )
-
-                        }
+                        nuevaCaptura
                       }
 
                     >
@@ -2250,10 +2342,6 @@ export default function MonitoreoEntrada() {
                   </div>
 
 
-                  {/* =============================================
-                      OCR SE ACTIVA EN PASO 3
-                      ============================================= */}
-
                   <CButton
 
                     color="success"
@@ -2270,15 +2358,18 @@ export default function MonitoreoEntrada() {
 
 
                   <div
+
                     className="
                       text-center
                       text-body-secondary
                       mt-2
                     "
+
                     style={{
                       fontSize:
                         10,
                     }}
+
                   >
 
                     El reconocimiento OCR
@@ -2348,7 +2439,7 @@ export default function MonitoreoEntrada() {
 
                   {
                     imagen
-                      ? 'La fotografía está lista. En el siguiente paso conectaremos el servicio OCR para reconocer automáticamente la placa.'
+                      ? 'La fotografía está lista para ser enviada al sistema de reconocimiento de placas.'
                       : 'Captura una fotografía o selecciona una imagen del vehículo para continuar.'
                   }
 
