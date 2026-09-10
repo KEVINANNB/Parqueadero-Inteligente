@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -18,17 +19,29 @@ import {
   CSpinner,
 } from '@coreui/react'
 
-import CIcon from '@coreui/icons-react'
+import CIcon
+  from '@coreui/icons-react'
 
 import {
   cilCamera,
+  cilCarAlt,
+  cilCheckCircle,
   cilFolderOpen,
   cilMediaStop,
+  cilReload,
+  cilSearch,
+  cilUser,
+  cilWarning,
+  cilXCircle,
 } from '@coreui/icons'
 
 import {
   useAuth,
 } from '../../context/AuthContext'
+
+import {
+  detectarPlaca,
+} from '../../services/ocr'
 
 
 /* ================================================================
@@ -38,14 +51,473 @@ import {
 const TAMANO_MAXIMO =
   4 * 1024 * 1024
 
+
 const TIPOS_PERMITIDOS = [
   'image/jpeg',
   'image/png',
 ]
 
 
+const TIMEOUT_OCR_MS =
+  60000
+
+
 /* ================================================================
-   COMPONENTE
+   UTILIDAD
+   ================================================================ */
+
+function primeroValido(
+  ...valores
+) {
+  return valores.find(
+    (
+      valor,
+    ) =>
+      valor !== undefined &&
+      valor !== null &&
+      valor !== '',
+  ) ?? null
+}
+
+
+/* ================================================================
+   NORMALIZAR PLACA
+   ================================================================ */
+
+function obtenerPlaca(
+  resultado,
+) {
+  return primeroValido(
+
+    resultado?.placa,
+
+    resultado?.placa_detectada,
+
+    resultado?.ocr?.placa,
+
+    resultado?.vehiculo?.placa,
+
+  )
+}
+
+
+/* ================================================================
+   CONFIANZA
+   ================================================================ */
+
+function obtenerConfianzaNumerica(
+  resultado,
+) {
+  const valor =
+    primeroValido(
+
+      resultado?.confianza,
+
+      resultado?.confianza_ocr,
+
+      resultado?.ocr?.confianza,
+
+      resultado?.confidence,
+
+    )
+
+
+  if (
+    valor === null
+  ) {
+    return null
+  }
+
+
+  const numero =
+    Number(
+      valor,
+    )
+
+
+  if (
+    !Number.isFinite(
+      numero,
+    )
+  ) {
+    return null
+  }
+
+
+  return numero <= 1
+    ? numero * 100
+    : numero
+}
+
+
+function formatearConfianza(
+  resultado,
+) {
+  const numero =
+    obtenerConfianzaNumerica(
+      resultado,
+    )
+
+
+  if (
+    numero === null
+  ) {
+    return '—'
+  }
+
+
+  return (
+    `${numero.toFixed(1)} %`
+  )
+}
+
+
+/* ================================================================
+   IMAGEN MARCADA
+   ================================================================ */
+
+function construirImagenMarcada(
+  resultado,
+) {
+  const base64 =
+    resultado
+      ?.imagen_marcada
+      ?.base64
+
+
+  if (
+    !base64
+  ) {
+    return ''
+  }
+
+
+  const mime =
+    resultado
+      ?.imagen_marcada
+      ?.mime_type
+
+    ||
+
+    'image/jpeg'
+
+
+  return (
+    `data:${mime};base64,${base64}`
+  )
+}
+
+
+/* ================================================================
+   NORMALIZAR VEHÍCULO
+
+   Se utilizan únicamente valores realmente
+   presentes en la respuesta del endpoint.
+
+   El objeto vehiculo puede venir anidado
+   dentro de resultado.vehiculo.
+   ================================================================ */
+
+function obtenerVehiculo(
+  resultado,
+) {
+  if (
+    !resultado ||
+    resultado?.vehiculo_encontrado !== true
+  ) {
+    return null
+  }
+
+
+  const fuente =
+    resultado?.vehiculo &&
+    typeof resultado.vehiculo === 'object'
+      ? resultado.vehiculo
+      : resultado
+
+
+  return {
+
+    placa:
+      primeroValido(
+        fuente?.placa,
+        resultado?.placa,
+        resultado?.placa_detectada,
+      ),
+
+
+    marca:
+      primeroValido(
+        fuente?.marca,
+      ),
+
+
+    modelo:
+      primeroValido(
+        fuente?.modelo,
+      ),
+
+
+    anio:
+      primeroValido(
+        fuente?.anio,
+        fuente?.año,
+      ),
+
+
+    color:
+      primeroValido(
+        fuente?.color,
+      ),
+
+
+    tipo:
+      primeroValido(
+        fuente?.tipo,
+        fuente?.tipo_vehiculo,
+      ),
+
+
+    foto_url:
+      primeroValido(
+        fuente?.foto_url,
+        fuente?.foto_vehiculo_url,
+        fuente?.fotografia_vehiculo,
+      ),
+
+
+    foto_propietario_url:
+      primeroValido(
+        fuente?.foto_propietario_url,
+        fuente?.fotografia_propietario,
+      ),
+
+
+    propietario_nombre:
+      primeroValido(
+        fuente?.propietario_nombre,
+        fuente?.propietario,
+        fuente?.nombre_propietario,
+      ),
+
+
+    cedula_enmascarada:
+      primeroValido(
+        fuente?.cedula_enmascarada,
+        fuente?.cedula,
+      ),
+
+
+    autorizado:
+      primeroValido(
+        fuente?.autorizado,
+        fuente?.autorizacion,
+      ),
+
+  }
+}
+
+
+/* ================================================================
+   AUTORIZACIÓN
+   ================================================================ */
+
+function estaAutorizado(
+  valor,
+) {
+  if (
+    valor === true
+  ) {
+    return true
+  }
+
+
+  if (
+    valor === false
+  ) {
+    return false
+  }
+
+
+  const texto =
+    String(
+      valor ?? '',
+    )
+      .trim()
+      .toLowerCase()
+
+
+  return [
+    'true',
+    '1',
+    'si',
+    'sí',
+    'autorizado',
+    'activo',
+  ].includes(
+    texto,
+  )
+}
+
+
+/* ================================================================
+   FOTO FALLBACK
+   ================================================================ */
+
+function FotoVehiculo({
+  src,
+  marca,
+  modelo,
+}) {
+  const [
+    errorImagen,
+    setErrorImagen,
+  ] =
+    useState(false)
+
+
+  useEffect(
+    () => {
+      setErrorImagen(false)
+    },
+    [
+      src,
+    ],
+  )
+
+
+  if (
+    !src ||
+    errorImagen
+  ) {
+    return (
+
+      <div className="ocr-sin-foto">
+
+        <CIcon
+          icon={cilCarAlt}
+          size="3xl"
+        />
+
+        <span>
+          Sin fotografía
+        </span>
+
+      </div>
+
+    )
+  }
+
+
+  return (
+
+    <img
+      src={src}
+      alt={
+        `${marca || 'Vehículo'} ${
+          modelo || ''
+        }`
+      }
+      className="ocr-foto-vehiculo"
+      onError={
+        () =>
+          setErrorImagen(true)
+      }
+    />
+
+  )
+}
+
+
+/* ================================================================
+   FOTO PROPIETARIO
+   ================================================================ */
+
+function FotoPropietario({
+  src,
+  nombre,
+}) {
+  const [
+    errorImagen,
+    setErrorImagen,
+  ] =
+    useState(false)
+
+
+  useEffect(
+    () => {
+      setErrorImagen(false)
+    },
+    [
+      src,
+    ],
+  )
+
+
+  const iniciales =
+    String(
+      nombre ||
+      'Usuario',
+    )
+      .trim()
+      .split(
+        /\s+/,
+      )
+      .filter(
+        Boolean,
+      )
+      .slice(
+        0,
+        2,
+      )
+      .map(
+        (
+          palabra,
+        ) =>
+          palabra
+            .charAt(0)
+            .toUpperCase(),
+      )
+      .join('')
+
+
+  if (
+    !src ||
+    errorImagen
+  ) {
+    return (
+
+      <div className="ocr-avatar-fallback">
+        {iniciales || 'U'}
+      </div>
+
+    )
+  }
+
+
+  return (
+
+    <img
+      src={src}
+      alt={
+        `Fotografía de ${
+          nombre ||
+          'propietario'
+        }`
+      }
+      className="ocr-foto-propietario"
+      onError={
+        () =>
+          setErrorImagen(true)
+      }
+    />
+
+  )
+}
+
+
+/* ================================================================
+   COMPONENTE PRINCIPAL
    ================================================================ */
 
 export default function MonitoreoEntrada() {
@@ -62,21 +534,29 @@ export default function MonitoreoEntrada() {
   const videoRef =
     useRef(null)
 
+
   const canvasRef =
     useRef(null)
+
 
   const inputArchivoRef =
     useRef(null)
 
+
   const streamRef =
     useRef(null)
+
 
   const urlTemporalRef =
     useRef(null)
 
 
+  const abortControllerRef =
+    useRef(null)
+
+
   /* ==============================================================
-     ESTADOS
+     ESTADOS CÁMARA
      ============================================================== */
 
   const [
@@ -121,6 +601,28 @@ export default function MonitoreoEntrada() {
     useState('')
 
 
+  /* ==============================================================
+     OCR
+     ============================================================== */
+
+  const [
+    procesando,
+    setProcesando,
+  ] =
+    useState(false)
+
+
+  const [
+    resultado,
+    setResultado,
+  ] =
+    useState(null)
+
+
+  /* ==============================================================
+     MENSAJES
+     ============================================================== */
+
   const [
     error,
     setError,
@@ -136,7 +638,72 @@ export default function MonitoreoEntrada() {
 
 
   /* ==============================================================
-     LIBERAR URL TEMPORAL
+     DATOS CALCULADOS
+     ============================================================== */
+
+  const estado =
+    resultado?.estado ||
+    null
+
+
+  const placa =
+    useMemo(
+      () =>
+        obtenerPlaca(
+          resultado,
+        ),
+      [
+        resultado,
+      ],
+    )
+
+
+  const confianza =
+    useMemo(
+      () =>
+        formatearConfianza(
+          resultado,
+        ),
+      [
+        resultado,
+      ],
+    )
+
+
+  const imagenMarcada =
+    useMemo(
+      () =>
+        construirImagenMarcada(
+          resultado,
+        ),
+      [
+        resultado,
+      ],
+    )
+
+
+  const vehiculo =
+    useMemo(
+      () =>
+        obtenerVehiculo(
+          resultado,
+        ),
+      [
+        resultado,
+      ],
+    )
+
+
+  const autorizado =
+    vehiculo
+      ? estaAutorizado(
+          vehiculo.autorizado,
+        )
+      : false
+
+
+  /* ==============================================================
+     URL TEMPORAL
      ============================================================== */
 
   const liberarUrlTemporal =
@@ -149,6 +716,7 @@ export default function MonitoreoEntrada() {
         URL.revokeObjectURL(
           urlTemporalRef.current,
         )
+
 
         urlTemporalRef.current =
           null
@@ -210,16 +778,7 @@ export default function MonitoreoEntrada() {
 
 
   /* ==============================================================
-     CONECTAR STREAM AL ELEMENTO <VIDEO>
-
-     IMPORTANTE:
-
-     React primero necesita renderizar el <video>.
-     Después de eso podemos asignar streamRef.current
-     al srcObject.
-
-     Esta es la corrección del problema donde solamente
-     aparecía el fondo oscuro sin imagen en vivo.
+     CONECTAR VIDEO
      ============================================================== */
 
   useEffect(
@@ -234,6 +793,7 @@ export default function MonitoreoEntrada() {
 
       const video =
         videoRef.current
+
 
       const stream =
         streamRef.current
@@ -269,7 +829,7 @@ export default function MonitoreoEntrada() {
 
 
             setError(
-              'La cámara fue activada, pero el navegador no pudo mostrar la imagen en vivo.',
+              'La cámara fue activada, pero no fue posible mostrar la imagen.',
             )
 
           }
@@ -302,13 +862,24 @@ export default function MonitoreoEntrada() {
 
 
   /* ==============================================================
-     LIMPIEZA AL SALIR DEL COMPONENTE
+     LIMPIEZA
      ============================================================== */
 
   useEffect(
     () => {
 
       return () => {
+
+        if (
+          abortControllerRef.current
+        ) {
+
+          abortControllerRef
+            .current
+            .abort()
+
+        }
+
 
         const stream =
           streamRef.current
@@ -333,10 +904,6 @@ export default function MonitoreoEntrada() {
         }
 
 
-        streamRef.current =
-          null
-
-
         if (
           urlTemporalRef.current
         ) {
@@ -344,9 +911,6 @@ export default function MonitoreoEntrada() {
           URL.revokeObjectURL(
             urlTemporalRef.current,
           )
-
-          urlTemporalRef.current =
-            null
 
         }
 
@@ -358,7 +922,26 @@ export default function MonitoreoEntrada() {
 
 
   /* ==============================================================
-     CREAR VISTA PREVIA
+     LIMPIAR RESULTADO
+     ============================================================== */
+
+  const limpiarResultado =
+    () => {
+
+      setResultado(
+        null,
+      )
+
+
+      setError(
+        '',
+      )
+
+    }
+
+
+  /* ==============================================================
+     ESTABLECER IMAGEN
      ============================================================== */
 
   const establecerImagen =
@@ -369,6 +952,9 @@ export default function MonitoreoEntrada() {
     ) => {
 
       liberarUrlTemporal()
+
+
+      limpiarResultado()
 
 
       const nuevaUrl =
@@ -415,13 +1001,13 @@ export default function MonitoreoEntrada() {
   const activarCamara =
     async () => {
 
-      setError(
-        '',
-      )
+      limpiarResultado()
+
 
       setMensaje(
         '',
       )
+
 
       setIniciandoCamara(
         true,
@@ -429,10 +1015,6 @@ export default function MonitoreoEntrada() {
 
 
       try {
-
-        /* ========================================================
-           COMPROBAR SOPORTE
-           ======================================================== */
 
         if (
           !navigator.mediaDevices ||
@@ -446,19 +1028,8 @@ export default function MonitoreoEntrada() {
         }
 
 
-        /* ========================================================
-           CERRAR STREAM ANTERIOR
-           ======================================================== */
-
         detenerCamara()
 
-
-        /* ========================================================
-           SOLICITAR CÁMARA
-
-           environment = preferencia por cámara posterior
-           en teléfonos y tablets.
-           ======================================================== */
 
         const stream =
           await navigator
@@ -490,21 +1061,9 @@ export default function MonitoreoEntrada() {
             })
 
 
-        /*
-         * Guardamos primero el stream.
-         */
-
         streamRef.current =
           stream
 
-
-        /*
-         * Ahora hacemos que React renderice
-         * el elemento <video>.
-         *
-         * El useEffect anterior será quien
-         * conecte el stream al video.
-         */
 
         setCamaraActiva(
           true,
@@ -520,7 +1079,7 @@ export default function MonitoreoEntrada() {
       ) {
 
         console.error(
-          'Error al activar cámara:',
+          'Error cámara:',
           err,
         )
 
@@ -535,7 +1094,7 @@ export default function MonitoreoEntrada() {
         ) {
 
           texto =
-            'El navegador no tiene permiso para utilizar la cámara. Permite el acceso y vuelve a intentarlo.'
+            'El navegador no tiene permiso para utilizar la cámara.'
 
         } else if (
           err?.name ===
@@ -543,7 +1102,7 @@ export default function MonitoreoEntrada() {
         ) {
 
           texto =
-            'No se encontró ninguna cámara disponible en este dispositivo.'
+            'No se encontró ninguna cámara disponible.'
 
         } else if (
           err?.name ===
@@ -551,23 +1110,7 @@ export default function MonitoreoEntrada() {
         ) {
 
           texto =
-            'La cámara está siendo utilizada por otra aplicación o no se encuentra disponible.'
-
-        } else if (
-          err?.name ===
-          'OverconstrainedError'
-        ) {
-
-          texto =
-            'La cámara encontrada no admite la configuración solicitada.'
-
-        } else if (
-          err?.name ===
-          'SecurityError'
-        ) {
-
-          texto =
-            'El navegador bloqueó el acceso a la cámara por motivos de seguridad.'
+            'La cámara está siendo utilizada por otra aplicación.'
 
         } else if (
           err?.message
@@ -606,9 +1149,8 @@ export default function MonitoreoEntrada() {
   const capturarFoto =
     async () => {
 
-      setError(
-        '',
-      )
+      limpiarResultado()
+
 
       setMensaje(
         '',
@@ -618,31 +1160,20 @@ export default function MonitoreoEntrada() {
       const video =
         videoRef.current
 
+
       const canvas =
         canvasRef.current
 
 
       if (
         !video ||
-        !canvas
-      ) {
-
-        setError(
-          'No fue posible acceder a la cámara.',
-        )
-
-        return
-
-      }
-
-
-      if (
+        !canvas ||
         !video.videoWidth ||
         !video.videoHeight
       ) {
 
         setError(
-          'La cámara todavía se está preparando. Espera un momento y vuelve a capturar.',
+          'La cámara todavía no está preparada.',
         )
 
         return
@@ -652,12 +1183,9 @@ export default function MonitoreoEntrada() {
 
       try {
 
-        /* ========================================================
-           AJUSTAR CANVAS
-           ======================================================== */
-
         canvas.width =
           video.videoWidth
+
 
         canvas.height =
           video.videoHeight
@@ -680,10 +1208,6 @@ export default function MonitoreoEntrada() {
         }
 
 
-        /* ========================================================
-           COPIAR FOTOGRAMA
-           ======================================================== */
-
         contexto.drawImage(
           video,
           0,
@@ -692,10 +1216,6 @@ export default function MonitoreoEntrada() {
           canvas.height,
         )
 
-
-        /* ========================================================
-           CANVAS -> BLOB JPEG
-           ======================================================== */
 
         const blob =
           await new Promise(
@@ -707,15 +1227,15 @@ export default function MonitoreoEntrada() {
               canvas.toBlob(
 
                 (
-                  resultado,
+                  resultadoBlob,
                 ) => {
 
                   if (
-                    resultado
+                    resultadoBlob
                   ) {
 
                     resolve(
-                      resultado,
+                      resultadoBlob,
                     )
 
                   } else {
@@ -740,17 +1260,13 @@ export default function MonitoreoEntrada() {
           )
 
 
-        /* ========================================================
-           VALIDAR TAMAÑO
-           ======================================================== */
-
         if (
           blob.size >
           TAMANO_MAXIMO
         ) {
 
           setError(
-            'La fotografía supera el tamaño máximo permitido de 4 MiB.',
+            'La fotografía supera el máximo permitido de 4 MiB.',
           )
 
           return
@@ -758,46 +1274,27 @@ export default function MonitoreoEntrada() {
         }
 
 
-        /* ========================================================
-           GENERAR NOMBRE
-           ======================================================== */
-
-        const fecha =
-          new Date()
-
-
-        const nombre =
-          `captura-vehiculo-${fecha.getTime()}.jpg`
-
-
-        /*
-         * Después de capturar la fotografía
-         * apagamos la cámara.
-         */
-
         detenerCamara()
 
 
         establecerImagen(
+
           blob,
+
           'camara',
-          nombre,
+
+          `captura-vehiculo-${Date.now()}.jpg`,
+
         )
 
 
         setMensaje(
-          'Fotografía capturada correctamente. Ya está lista para el reconocimiento.',
+          'Fotografía capturada correctamente.',
         )
 
       } catch (
         err
       ) {
-
-        console.error(
-          'Error capturando fotografía:',
-          err,
-        )
-
 
         setError(
           err?.message ||
@@ -810,7 +1307,7 @@ export default function MonitoreoEntrada() {
 
 
   /* ==============================================================
-     ABRIR SELECTOR DE ARCHIVOS
+     ABRIR SELECTOR
      ============================================================== */
 
   const abrirSelector =
@@ -819,6 +1316,7 @@ export default function MonitoreoEntrada() {
       setError(
         '',
       )
+
 
       setMensaje(
         '',
@@ -841,9 +1339,8 @@ export default function MonitoreoEntrada() {
       evento,
     ) => {
 
-      setError(
-        '',
-      )
+      limpiarResultado()
+
 
       setMensaje(
         '',
@@ -863,10 +1360,6 @@ export default function MonitoreoEntrada() {
       }
 
 
-      /* ========================================================
-         VALIDAR FORMATO
-         ======================================================== */
-
       if (
         !TIPOS_PERMITIDOS.includes(
           archivo.type,
@@ -874,7 +1367,7 @@ export default function MonitoreoEntrada() {
       ) {
 
         setError(
-          'Formato no permitido. Selecciona únicamente una imagen JPG, JPEG o PNG.',
+          'Formato no permitido. Utiliza JPG, JPEG o PNG.',
         )
 
 
@@ -885,10 +1378,6 @@ export default function MonitoreoEntrada() {
 
       }
 
-
-      /* ========================================================
-         VALIDAR TAMAÑO
-         ======================================================== */
 
       if (
         archivo.size >
@@ -908,33 +1397,24 @@ export default function MonitoreoEntrada() {
       }
 
 
-      /* ========================================================
-         CERRAR CÁMARA
-         ======================================================== */
-
       detenerCamara()
 
 
-      /* ========================================================
-         GUARDAR IMAGEN
-         ======================================================== */
-
       establecerImagen(
+
         archivo,
+
         'archivo',
+
         archivo.name,
+
       )
 
 
       setMensaje(
-        'Imagen seleccionada correctamente. Ya está lista para el reconocimiento.',
+        'Imagen seleccionada correctamente.',
       )
 
-
-      /*
-       * Permite seleccionar nuevamente
-       * el mismo archivo.
-       */
 
       evento.target.value =
         ''
@@ -950,6 +1430,9 @@ export default function MonitoreoEntrada() {
     () => {
 
       liberarUrlTemporal()
+
+
+      limpiarResultado()
 
 
       setImagen(
@@ -976,11 +1459,6 @@ export default function MonitoreoEntrada() {
         '',
       )
 
-
-      setError(
-        '',
-      )
-
     }
 
 
@@ -994,20 +1472,137 @@ export default function MonitoreoEntrada() {
       descartarImagen()
 
 
-      /*
-       * Esperamos a que React retire
-       * la vista previa antes de iniciar
-       * nuevamente la cámara.
-       */
-
       setTimeout(
-        () => {
-
-          activarCamara()
-
-        },
+        activarCamara,
         50,
       )
+
+    }
+
+
+  /* ==============================================================
+     PROCESAR OCR
+     ============================================================== */
+
+  const procesarImagen =
+    async () => {
+
+      if (
+        !imagen ||
+        procesando
+      ) {
+        return
+      }
+
+
+      setProcesando(
+        true,
+      )
+
+
+      setResultado(
+        null,
+      )
+
+
+      setError(
+        '',
+      )
+
+
+      setMensaje(
+        '',
+      )
+
+
+      const controller =
+        new AbortController()
+
+
+      abortControllerRef.current =
+        controller
+
+
+      const timeout =
+        setTimeout(
+          () => {
+
+            controller.abort()
+
+          },
+          TIMEOUT_OCR_MS,
+        )
+
+
+      try {
+
+        const respuesta =
+          await detectarPlaca(
+
+            imagen,
+
+            {
+              signal:
+                controller.signal,
+            },
+
+          )
+
+
+        console.log(
+          'Respuesta OCR:',
+          respuesta,
+        )
+
+
+        setResultado(
+          respuesta,
+        )
+
+      } catch (
+        err
+      ) {
+
+        console.error(
+          'Error OCR:',
+          err,
+        )
+
+
+        if (
+          err?.name ===
+          'AbortError'
+        ) {
+
+          setError(
+            'El reconocimiento tardó demasiado tiempo. Intenta nuevamente.',
+          )
+
+        } else {
+
+          setError(
+            err?.message ||
+            'No fue posible procesar la imagen.',
+          )
+
+        }
+
+      } finally {
+
+        clearTimeout(
+          timeout,
+        )
+
+
+        abortControllerRef.current =
+          null
+
+
+        setProcesando(
+          false,
+        )
+
+      }
 
     }
 
@@ -1054,10 +1649,169 @@ export default function MonitoreoEntrada() {
 
 
   /* ==============================================================
-     SEGURIDAD DE LA VISTA
+     COLOR DEL ESTADO
+     ============================================================== */
 
-     Se coloca después de los hooks para no romper
-     las reglas de hooks de React.
+  const obtenerColorEstado =
+    () => {
+
+      switch (
+        estado
+      ) {
+
+        case 'encontrado':
+          return 'success'
+
+
+        case 'no_registrado':
+          return 'danger'
+
+
+        case 'sin_placa':
+        case 'baja_confianza':
+        case 'multiples_placas':
+          return 'warning'
+
+
+        default:
+          return 'secondary'
+
+      }
+
+    }
+
+
+  /* ==============================================================
+     ICONO RESULTADO
+     ============================================================== */
+
+  const obtenerIconoEstado =
+    () => {
+
+      switch (
+        estado
+      ) {
+
+        case 'encontrado':
+          return cilCheckCircle
+
+
+        case 'no_registrado':
+          return cilXCircle
+
+
+        case 'sin_placa':
+        case 'baja_confianza':
+        case 'multiples_placas':
+          return cilWarning
+
+
+        default:
+          return cilSearch
+
+      }
+
+    }
+
+
+  /* ==============================================================
+     TÍTULO
+     ============================================================== */
+
+  const obtenerTituloEstado =
+    () => {
+
+      switch (
+        estado
+      ) {
+
+        case 'encontrado':
+          return 'Vehículo registrado'
+
+
+        case 'no_registrado':
+          return 'Vehículo no registrado'
+
+
+        case 'sin_placa':
+          return 'No se detectó una placa'
+
+
+        case 'baja_confianza':
+          return 'Baja confianza'
+
+
+        case 'multiples_placas':
+          return 'Varias placas detectadas'
+
+
+        default:
+          return 'Resultado recibido'
+
+      }
+
+    }
+
+
+  /* ==============================================================
+     DESCRIPCIÓN
+     ============================================================== */
+
+  const obtenerDescripcionEstado =
+    () => {
+
+      switch (
+        estado
+      ) {
+
+        case 'encontrado':
+
+          return autorizado
+            ? 'El vehículo se encuentra registrado y autorizado para ingresar.'
+            : 'El vehículo se encuentra registrado, pero actualmente no está autorizado para ingresar.'
+
+
+        case 'no_registrado':
+
+          return (
+            'La placa fue reconocida, pero no existe un vehículo registrado asociado.'
+          )
+
+
+        case 'sin_placa':
+
+          return (
+            'No fue posible localizar una placa en la fotografía. Captura una nueva imagen.'
+          )
+
+
+        case 'baja_confianza':
+
+          return (
+            'La lectura obtenida no posee suficiente confianza. Intenta tomar una fotografía más clara.'
+          )
+
+
+        case 'multiples_placas':
+
+          return (
+            'La imagen contiene varias placas. Utiliza una fotografía donde aparezca un solo vehículo.'
+          )
+
+
+        default:
+
+          return (
+            'El servicio devolvió una respuesta que no corresponde a uno de los estados conocidos.'
+          )
+
+      }
+
+    }
+
+
+  /* ==============================================================
+     SEGURIDAD
      ============================================================== */
 
   if (
@@ -1084,17 +1838,13 @@ export default function MonitoreoEntrada() {
       <style>{`
 
         /* =====================================================
-           PÁGINA
+           BASE
            ===================================================== */
 
         .monitoreo-entrada {
           width: 100%;
         }
 
-
-        /* =====================================================
-           CABECERA
-           ===================================================== */
 
         .monitoreo-entrada-encabezado {
           display: flex;
@@ -1123,7 +1873,7 @@ export default function MonitoreoEntrada() {
 
 
         .monitoreo-entrada-descripcion {
-          max-width: 700px;
+          max-width: 720px;
           margin-top: 7px;
           margin-bottom: 0;
           color: #687386;
@@ -1133,28 +1883,22 @@ export default function MonitoreoEntrada() {
 
 
         /* =====================================================
-           GRID
+           COLUMNAS
            ===================================================== */
 
         .monitoreo-entrada-grid {
           display: grid;
-
           grid-template-columns:
-            minmax(0, 1.05fr)
-            minmax(0, .95fr);
-
+            minmax(0, 1.02fr)
+            minmax(0, .98fr);
           gap: 18px;
-          align-items: stretch;
+          align-items: start;
         }
 
 
         .monitoreo-entrada-card {
-          height: 100%;
           overflow: hidden;
-
-          border:
-            1px solid #dfe5eb;
-
+          border: 1px solid #dfe5eb;
           box-shadow:
             0 4px 14px
             rgba(15, 23, 42, .05);
@@ -1163,37 +1907,23 @@ export default function MonitoreoEntrada() {
 
         .monitoreo-entrada-card .card-header {
           padding: 13px 16px;
-
-          background:
-            #f7f9fb;
-
-          border-bottom:
-            1px solid #dfe5eb;
+          background: #f7f9fb;
+          border-bottom: 1px solid #dfe5eb;
         }
 
 
         .monitoreo-entrada-card-titulo {
           margin: 0;
-
-          color:
-            #172033;
-
-          font-size:
-            14px;
-
-          font-weight:
-            700;
+          color: #172033;
+          font-size: 14px;
+          font-weight: 700;
         }
 
 
         .monitoreo-entrada-card-subtitulo {
           margin-top: 3px;
-
-          color:
-            #7a8594;
-
-          font-size:
-            11px;
+          color: #7a8594;
+          font-size: 11px;
         }
 
 
@@ -1203,235 +1933,92 @@ export default function MonitoreoEntrada() {
 
         .monitoreo-camara-marco {
           position: relative;
-
           width: 100%;
-
-          aspect-ratio:
-            16 / 9;
-
-          min-height:
-            320px;
-
-          display:
-            grid;
-
-          place-items:
-            center;
-
-          overflow:
-            hidden;
-
-          border:
-            1px solid #d6dee5;
-
-          border-radius:
-            10px;
-
-          background:
-            #111827;
-
-          text-align:
-            center;
+          aspect-ratio: 16 / 9;
+          min-height: 305px;
+          display: grid;
+          place-items: center;
+          overflow: hidden;
+          border: 1px solid #d6dee5;
+          border-radius: 10px;
+          background: #111827;
         }
 
 
-        /* =====================================================
-           VIDEO
-           ===================================================== */
-
-        .monitoreo-video {
-          position: absolute;
-
-          inset: 0;
-
-          width: 100%;
-          height: 100%;
-
-          object-fit:
-            cover;
-
-          background:
-            #111827;
-        }
-
-
-        /* =====================================================
-           PREVIEW
-           ===================================================== */
-
+        .monitoreo-video,
         .monitoreo-preview {
           position: absolute;
-
           inset: 0;
-
           width: 100%;
           height: 100%;
-
-          object-fit:
-            contain;
-
-          background:
-            #111827;
+          object-fit: contain;
+          background: #111827;
         }
 
 
-        /* =====================================================
-           PLACEHOLDER
-           ===================================================== */
-
         .monitoreo-camara-placeholder {
-          max-width:
-            340px;
-
-          padding:
-            25px;
-
-          color:
-            #ffffff;
+          max-width: 340px;
+          padding: 25px;
+          color: #ffffff;
+          text-align: center;
         }
 
 
         .monitoreo-camara-icono {
-          width:
-            62px;
-
-          height:
-            62px;
-
-          display:
-            grid;
-
-          place-items:
-            center;
-
-          margin:
-            0 auto 14px;
-
-          border-radius:
-            50%;
-
-          background:
-            rgba(
-              34,
-              197,
-              94,
-              .16
-            );
-
-          color:
-            #4ade80;
+          width: 62px;
+          height: 62px;
+          display: grid;
+          place-items: center;
+          margin: 0 auto 14px;
+          border-radius: 50%;
+          background: rgba(34,197,94,.16);
+          color: #4ade80;
         }
 
 
         .monitoreo-camara-icono svg {
-          width:
-            29px;
-
-          height:
-            29px;
+          width: 29px;
+          height: 29px;
         }
 
 
         .monitoreo-camara-placeholder h4 {
-          margin-bottom:
-            7px;
-
-          color:
-            #ffffff;
-
-          font-size:
-            17px;
+          margin-bottom: 7px;
+          color: white;
+          font-size: 17px;
         }
 
 
         .monitoreo-camara-placeholder p {
-          margin:
-            0;
-
-          color:
-            #cbd5e1;
-
-          font-size:
-            12px;
-
-          line-height:
-            1.5;
+          margin: 0;
+          color: #cbd5e1;
+          font-size: 12px;
+          line-height: 1.5;
         }
 
 
-        /* =====================================================
-           LIVE
-           ===================================================== */
-
         .monitoreo-live-badge {
-          position:
-            absolute;
-
-          z-index:
-            5;
-
-          top:
-            12px;
-
-          left:
-            12px;
-
-          display:
-            flex;
-
-          align-items:
-            center;
-
-          gap:
-            6px;
-
-          padding:
-            6px 10px;
-
-          border-radius:
-            999px;
-
-          background:
-            rgba(
-              17,
-              24,
-              39,
-              .82
-            );
-
-          color:
-            #ffffff;
-
-          font-size:
-            10px;
-
-          font-weight:
-            700;
+          position: absolute;
+          z-index: 5;
+          top: 12px;
+          left: 12px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: rgba(17,24,39,.82);
+          color: #ffffff;
+          font-size: 10px;
+          font-weight: 700;
         }
 
 
         .monitoreo-live-punto {
-          width:
-            8px;
-
-          height:
-            8px;
-
-          border-radius:
-            50%;
-
-          background:
-            #ef4444;
-
-          box-shadow:
-            0 0 0
-            4px
-            rgba(
-              239,
-              68,
-              68,
-              .16
-            );
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #ef4444;
         }
 
 
@@ -1440,161 +2027,122 @@ export default function MonitoreoEntrada() {
            ===================================================== */
 
         .monitoreo-archivo {
-          display:
-            flex;
-
-          justify-content:
-            space-between;
-
-          align-items:
-            center;
-
-          gap:
-            12px;
-
-          margin-top:
-            12px;
-
-          padding:
-            10px 12px;
-
-          border:
-            1px solid #dfe5eb;
-
-          border-radius:
-            8px;
-
-          background:
-            #f8fafc;
-        }
-
-
-        .monitoreo-archivo-info {
-          min-width:
-            0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-top: 12px;
+          padding: 10px 12px;
+          border: 1px solid #dfe5eb;
+          border-radius: 8px;
+          background: #f8fafc;
         }
 
 
         .monitoreo-archivo-nombre {
-          display:
-            block;
-
-          max-width:
-            420px;
-
-          overflow:
-            hidden;
-
-          text-overflow:
-            ellipsis;
-
-          white-space:
-            nowrap;
-
-          color:
-            #172033;
-
-          font-size:
-            11px;
-
-          font-weight:
-            700;
+          display: block;
+          max-width: 390px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          color: #172033;
+          font-size: 11px;
+          font-weight: 700;
         }
 
 
         .monitoreo-archivo-meta {
-          display:
-            block;
-
-          margin-top:
-            3px;
-
-          color:
-            #7a8594;
-
-          font-size:
-            10px;
+          display: block;
+          margin-top: 3px;
+          color: #7a8594;
+          font-size: 10px;
         }
 
 
         /* =====================================================
-           CONTROLES
+           BOTONES
            ===================================================== */
 
         .monitoreo-controles {
-          display:
-            grid;
-
+          display: grid;
           grid-template-columns:
             repeat(
               2,
               minmax(0, 1fr)
             );
-
-          gap:
-            10px;
-
-          margin-top:
-            14px;
+          gap: 10px;
+          margin-top: 14px;
         }
 
-
-        .monitoreo-controles-camara {
-          display:
-            grid;
-
-          grid-template-columns:
-            repeat(
-              2,
-              minmax(0, 1fr)
-            );
-
-          gap:
-            10px;
-
-          margin-top:
-            14px;
-        }
-
-
-        /* =====================================================
-           SEPARADOR
-           ===================================================== */
 
         .monitoreo-separador {
-          display:
-            flex;
-
-          align-items:
-            center;
-
-          gap:
-            12px;
-
-          margin:
-            16px 0 12px;
-
-          color:
-            #94a3b8;
-
-          font-size:
-            10px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 16px 0 12px;
+          color: #94a3b8;
+          font-size: 10px;
         }
 
 
         .monitoreo-separador::before,
         .monitoreo-separador::after {
-          content:
-            '';
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: #e2e8f0;
+        }
 
-          flex:
-            1;
 
-          height:
-            1px;
+        /* =====================================================
+           ESPERA
+           ===================================================== */
 
-          background:
-            #e2e8f0;
+        .resultado-espera {
+          min-height: 470px;
+          display: grid;
+          place-items: center;
+          padding: 30px;
+          text-align: center;
+        }
+
+
+        .resultado-espera-icono {
+          width: 70px;
+          height: 70px;
+          display: grid;
+          place-items: center;
+          margin: 0 auto 15px;
+          border-radius: 50%;
+          background: #eef2f6;
+          color: #718096;
+        }
+
+
+        .resultado-espera h4 {
+          color: #172033;
+          font-size: 18px;
+        }
+
+
+        .resultado-espera p {
+          max-width: 360px;
+          color: #718096;
+          font-size: 12px;
+          line-height: 1.55;
+        }
+
+
+        /* =====================================================
+           PROCESANDO
+           ===================================================== */
+
+        .ocr-procesando {
+          min-height: 470px;
+          display: grid;
+          place-items: center;
+          padding: 30px;
+          text-align: center;
         }
 
 
@@ -1602,168 +2150,331 @@ export default function MonitoreoEntrada() {
            RESULTADO
            ===================================================== */
 
-        .monitoreo-resultado-vacio {
-          min-height:
-            280px;
-
-          display:
-            flex;
-
-          flex-direction:
-            column;
-
-          justify-content:
-            center;
-
-          align-items:
-            center;
-
-          padding:
-            30px;
-
-          text-align:
-            center;
+        .ocr-resultado-superior {
+          padding: 16px;
+          margin-bottom: 14px;
+          border: 1px solid #e0e6eb;
+          border-radius: 10px;
+          background: #fafbfc;
         }
 
 
-        .monitoreo-resultado-vacio-icono {
-          width:
-            60px;
-
-          height:
-            60px;
-
-          display:
-            grid;
-
-          place-items:
-            center;
-
-          margin-bottom:
-            14px;
-
-          border-radius:
-            50%;
-
-          background:
-            #eef2f6;
-
-          color:
-            #708090;
+        .ocr-estado-linea {
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }
 
 
-        .monitoreo-resultado-vacio-icono svg {
-          width:
-            27px;
-
-          height:
-            27px;
+        .ocr-estado-icono {
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: #eef2f6;
         }
 
 
-        .monitoreo-resultado-vacio h4 {
-          margin-bottom:
-            7px;
-
-          color:
-            #172033;
-
-          font-size:
-            18px;
+        .ocr-resultado-superior h3 {
+          margin: 5px 0 3px;
+          color: #172033;
+          font-size: 19px;
         }
 
 
-        .monitoreo-resultado-vacio p {
-          max-width:
-            350px;
-
-          margin-bottom:
-            0;
-
-          color:
-            #718096;
-
-          font-size:
-            12px;
-
-          line-height:
-            1.55;
+        .ocr-resultado-superior p {
+          margin: 0;
+          color: #697586;
+          font-size: 11px;
+          line-height: 1.5;
         }
 
 
         /* =====================================================
-           DATOS
+           PLACA PRINCIPAL
            ===================================================== */
 
-        .monitoreo-datos-espera {
-          display:
-            grid;
+        .ocr-placa-principal {
+          display: grid;
+          grid-template-columns:
+            1fr 1fr;
+          gap: 10px;
+          margin-bottom: 14px;
+        }
 
+
+        .ocr-placa-box {
+          padding: 14px;
+          border: 1px solid #dfe5eb;
+          border-radius: 10px;
+          background: white;
+        }
+
+
+        .ocr-label {
+          display: block;
+          margin-bottom: 5px;
+          color: #7a8594;
+          font-size: 9px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: .05em;
+        }
+
+
+        .ocr-placa-valor {
+          color: #172033;
+          font-size: 25px;
+          font-weight: 800;
+          letter-spacing: .05em;
+        }
+
+
+        .ocr-confianza-valor {
+          color: #159447;
+          font-size: 23px;
+          font-weight: 800;
+        }
+
+
+        /* =====================================================
+           IMAGEN MARCADA
+           ===================================================== */
+
+        .ocr-imagen-marcada-contenedor {
+          overflow: hidden;
+          margin-bottom: 14px;
+          border: 1px solid #dfe5eb;
+          border-radius: 10px;
+          background: #111827;
+        }
+
+
+        .ocr-imagen-marcada-cabecera {
+          padding: 9px 12px;
+          background: #f7f9fb;
+          color: #172033;
+          font-size: 11px;
+          font-weight: 700;
+          border-bottom: 1px solid #dfe5eb;
+        }
+
+
+        .ocr-imagen-marcada {
+          display: block;
+          width: 100%;
+          max-height: 310px;
+          object-fit: contain;
+          background: #111827;
+        }
+
+
+        /* =====================================================
+           VEHÍCULO
+           ===================================================== */
+
+        .ocr-seccion {
+          overflow: hidden;
+          margin-top: 14px;
+          border: 1px solid #dfe5eb;
+          border-radius: 10px;
+          background: #ffffff;
+        }
+
+
+        .ocr-seccion-titulo {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: 10px 13px;
+          background: #f7f9fb;
+          border-bottom: 1px solid #dfe5eb;
+          color: #172033;
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+
+        .ocr-vehiculo-contenido {
+          display: grid;
+          grid-template-columns:
+            145px minmax(0,1fr);
+          gap: 14px;
+          padding: 13px;
+        }
+
+
+        .ocr-foto-vehiculo,
+        .ocr-sin-foto {
+          width: 145px;
+          height: 105px;
+          border-radius: 9px;
+        }
+
+
+        .ocr-foto-vehiculo {
+          object-fit: cover;
+          border: 1px solid #e2e8f0;
+        }
+
+
+        .ocr-sin-foto {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 7px;
+          background: #f1f5f9;
+          color: #64748b;
+          font-size: 10px;
+        }
+
+
+        .ocr-datos-grid {
+          display: grid;
           grid-template-columns:
             repeat(
               2,
-              minmax(0, 1fr)
+              minmax(0,1fr)
             );
-
-          gap:
-            10px;
-
-          margin-top:
-            15px;
+          gap: 8px;
         }
 
 
-        .monitoreo-dato {
-          padding:
-            12px;
-
-          border:
-            1px solid #e0e6eb;
-
-          border-radius:
-            8px;
-
-          background:
-            #fafbfc;
+        .ocr-dato {
+          padding: 9px 10px;
+          border: 1px solid #e5e9ed;
+          border-radius: 7px;
+          background: #fafbfc;
         }
 
 
-        .monitoreo-dato-label {
-          display:
-            block;
-
-          margin-bottom:
-            5px;
-
-          color:
-            #7a8594;
-
-          font-size:
-            10px;
-
-          text-transform:
-            uppercase;
-
-          letter-spacing:
-            .04em;
-        }
-
-
-        .monitoreo-dato-valor {
-          color:
-            #172033;
-
-          font-size:
-            13px;
-
-          font-weight:
-            700;
+        .ocr-dato-valor {
+          color: #172033;
+          font-size: 12px;
+          font-weight: 700;
         }
 
 
         /* =====================================================
-           TABLET
+           PROPIETARIO
+           ===================================================== */
+
+        .ocr-propietario-contenido {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 14px;
+        }
+
+
+        .ocr-foto-propietario,
+        .ocr-avatar-fallback {
+          width: 68px;
+          height: 68px;
+          min-width: 68px;
+          border-radius: 50%;
+        }
+
+
+        .ocr-foto-propietario {
+          object-fit: cover;
+          border: 2px solid #d1e7dd;
+        }
+
+
+        .ocr-avatar-fallback {
+          display: grid;
+          place-items: center;
+          background: #e8f5ed;
+          color: #087b26;
+          border: 2px solid #d1e7dd;
+          font-weight: 800;
+          font-size: 19px;
+        }
+
+
+        .ocr-propietario-nombre {
+          margin-bottom: 5px;
+          color: #172033;
+          font-size: 14px;
+          font-weight: 800;
+        }
+
+
+        .ocr-propietario-cedula {
+          color: #697586;
+          font-size: 11px;
+        }
+
+
+        /* =====================================================
+           AUTORIZACIÓN
+           ===================================================== */
+
+        .ocr-autorizacion {
+          margin-top: 14px;
+          padding: 14px;
+          border-radius: 10px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+
+        .ocr-autorizacion-ok {
+          background: #dff5e7;
+          border: 1px solid #a7e4bb;
+          color: #106b32;
+        }
+
+
+        .ocr-autorizacion-no {
+          background: #fee2e2;
+          border: 1px solid #fca5a5;
+          color: #a71919;
+        }
+
+
+        /* =====================================================
+           NO REGISTRADO
+           ===================================================== */
+
+        .ocr-no-registrado {
+          padding: 25px 18px;
+          text-align: center;
+        }
+
+
+        .ocr-no-registrado-icono {
+          width: 70px;
+          height: 70px;
+          display: grid;
+          place-items: center;
+          margin: 0 auto 14px;
+          border-radius: 50%;
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+
+        .ocr-no-registrado h3 {
+          margin-bottom: 8px;
+          color: #b91c1c;
+          font-size: 20px;
+        }
+
+
+        .ocr-no-registrado p {
+          color: #697586;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+
+        /* =====================================================
+           RESPONSIVE
            ===================================================== */
 
         @media (
@@ -1771,64 +2482,42 @@ export default function MonitoreoEntrada() {
         ) {
 
           .monitoreo-entrada-grid {
-            grid-template-columns:
-              1fr;
-          }
-
-
-          .monitoreo-camara-marco {
-            min-height:
-              280px;
+            grid-template-columns: 1fr;
           }
 
         }
 
-
-        /* =====================================================
-           MÓVIL
-           ===================================================== */
 
         @media (
           max-width: 600px
         ) {
 
           .monitoreo-entrada-encabezado {
-            flex-direction:
-              column;
-          }
-
-
-          .monitoreo-entrada-titulo {
-            font-size:
-              23px;
-          }
-
-
-          .monitoreo-camara-marco {
-            min-height:
-              220px;
+            flex-direction: column;
           }
 
 
           .monitoreo-controles,
-          .monitoreo-controles-camara {
-            grid-template-columns:
-              1fr;
+          .ocr-placa-principal,
+          .ocr-datos-grid {
+            grid-template-columns: 1fr;
           }
 
 
-          .monitoreo-datos-espera {
-            grid-template-columns:
-              1fr;
+          .ocr-vehiculo-contenido {
+            grid-template-columns: 1fr;
           }
 
 
-          .monitoreo-archivo {
-            align-items:
-              flex-start;
+          .ocr-foto-vehiculo,
+          .ocr-sin-foto {
+            width: 100%;
+            height: 190px;
+          }
 
-            flex-direction:
-              column;
+
+          .monitoreo-camara-marco {
+            min-height: 220px;
           }
 
         }
@@ -1839,7 +2528,7 @@ export default function MonitoreoEntrada() {
       <div className="monitoreo-entrada">
 
         {/* =====================================================
-            CABECERA
+            ENCABEZADO
             ===================================================== */}
 
         <div className="monitoreo-entrada-encabezado">
@@ -1858,9 +2547,10 @@ export default function MonitoreoEntrada() {
 
             <p className="monitoreo-entrada-descripcion">
 
-              Captura o selecciona una fotografía
-              del vehículo para realizar posteriormente
-              el reconocimiento automático de su placa.
+              Captura o selecciona una fotografía del
+              vehículo para reconocer automáticamente
+              su placa y comprobar su registro y
+              autorización en Smart Parking UTEQ.
 
             </p>
 
@@ -1884,16 +2574,32 @@ export default function MonitoreoEntrada() {
 
         {error && (
 
-          <CAlert
-            color="danger"
-            dismissible
-            onClose={
-              () =>
-                setError('')
-            }
-          >
+          <CAlert color="danger">
 
-            {error}
+            <strong>
+              No se pudo completar el reconocimiento.
+            </strong>
+
+
+            <div className="mt-1">
+              {error}
+            </div>
+
+
+            {imagen && (
+
+              <CButton
+                color="danger"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                disabled={procesando}
+                onClick={procesarImagen}
+              >
+                Reintentar
+              </CButton>
+
+            )}
 
           </CAlert>
 
@@ -1910,22 +2616,16 @@ export default function MonitoreoEntrada() {
                 setMensaje('')
             }
           >
-
             {mensaje}
-
           </CAlert>
 
         )}
 
 
-        {/* =====================================================
-            COLUMNAS
-            ===================================================== */}
-
         <div className="monitoreo-entrada-grid">
 
           {/* ===================================================
-              CAPTURA
+              IZQUIERDA
               =================================================== */}
 
           <CCard className="monitoreo-entrada-card">
@@ -1938,10 +2638,7 @@ export default function MonitoreoEntrada() {
 
 
               <div className="monitoreo-entrada-card-subtitulo">
-
-                Utiliza la cámara en tiempo real
-                o selecciona una imagen JPG/PNG.
-
+                Cámara en tiempo real o imagen JPG/PNG.
               </div>
 
             </CCardHeader>
@@ -1949,24 +2646,14 @@ export default function MonitoreoEntrada() {
 
             <CCardBody>
 
-              {/* =================================================
-                  VISOR
-                  ================================================= */}
-
               <div className="monitoreo-camara-marco">
 
                 {vistaPrevia ? (
 
                   <img
-
-                    src={
-                      vistaPrevia
-                    }
-
+                    src={vistaPrevia}
                     alt="Vehículo seleccionado"
-
                     className="monitoreo-preview"
-
                   />
 
                 ) : camaraActiva ? (
@@ -1974,19 +2661,11 @@ export default function MonitoreoEntrada() {
                   <>
 
                     <video
-
-                      ref={
-                        videoRef
-                      }
-
+                      ref={videoRef}
                       className="monitoreo-video"
-
                       autoPlay
-
                       playsInline
-
                       muted
-
                     />
 
 
@@ -2007,9 +2686,7 @@ export default function MonitoreoEntrada() {
                     <div className="monitoreo-camara-icono">
 
                       <CIcon
-                        icon={
-                          cilCamera
-                        }
+                        icon={cilCamera}
                       />
 
                     </div>
@@ -2022,10 +2699,8 @@ export default function MonitoreoEntrada() {
 
                     <p>
 
-                      Activa la cámara para capturar
-                      una fotografía del vehículo
-                      o selecciona una imagen almacenada
-                      en el dispositivo.
+                      Activa la cámara o selecciona
+                      una fotografía almacenada.
 
                     </p>
 
@@ -2036,60 +2711,33 @@ export default function MonitoreoEntrada() {
               </div>
 
 
-              {/* CANVAS OCULTO */}
-
               <canvas
-
-                ref={
-                  canvasRef
-                }
-
+                ref={canvasRef}
                 style={{
-                  display:
-                    'none',
+                  display: 'none',
                 }}
-
               />
 
-
-              {/* INPUT ARCHIVO */}
 
               <input
-
-                ref={
-                  inputArchivoRef
-                }
-
+                ref={inputArchivoRef}
                 type="file"
-
                 accept="image/jpeg,image/png"
-
-                onChange={
-                  seleccionarImagen
-                }
-
+                onChange={seleccionarImagen}
                 style={{
-                  display:
-                    'none',
+                  display: 'none',
                 }}
-
               />
 
-
-              {/* =================================================
-                  INFO IMAGEN
-                  ================================================= */}
 
               {imagen && (
 
                 <div className="monitoreo-archivo">
 
-                  <div className="monitoreo-archivo-info">
+                  <div>
 
                     <span className="monitoreo-archivo-nombre">
-
                       {nombreImagen}
-
                     </span>
 
 
@@ -2112,21 +2760,13 @@ export default function MonitoreoEntrada() {
 
 
                   <CButton
-
                     color="danger"
-
                     variant="ghost"
-
                     size="sm"
-
-                    onClick={
-                      descartarImagen
-                    }
-
+                    disabled={procesando}
+                    onClick={descartarImagen}
                   >
-
                     Descartar
-
                   </CButton>
 
                 </div>
@@ -2134,55 +2774,37 @@ export default function MonitoreoEntrada() {
               )}
 
 
-              {/* =================================================
-                  SIN CÁMARA / SIN FOTO
-                  ================================================= */}
-
               {!camaraActiva &&
               !vistaPrevia && (
 
                 <div className="monitoreo-controles">
 
                   <CButton
-
                     color="success"
-
-                    onClick={
-                      activarCamara
-                    }
-
-                    disabled={
-                      iniciandoCamara
-                    }
-
+                    disabled={iniciandoCamara}
+                    onClick={activarCamara}
                   >
 
                     {iniciandoCamara ? (
 
                       <>
-
                         <CSpinner
                           size="sm"
                           className="me-2"
                         />
 
-                        Iniciando cámara...
-
+                        Iniciando...
                       </>
 
                     ) : (
 
                       <>
-
                         <CIcon
-                          icon={
-                            cilCamera
-                          }
+                          icon={cilCamera}
                           className="me-2"
                         />
 
                         Activar cámara
-
                       </>
 
                     )}
@@ -2191,191 +2813,142 @@ export default function MonitoreoEntrada() {
 
 
                   <CButton
-
                     color="secondary"
-
                     variant="outline"
-
-                    onClick={
-                      abrirSelector
-                    }
-
+                    onClick={abrirSelector}
                   >
 
                     <CIcon
-                      icon={
-                        cilFolderOpen
-                      }
+                      icon={cilFolderOpen}
                       className="me-2"
                     />
 
                     Seleccionar imagen
-
                   </CButton>
 
                 </div>
 
               )}
 
-
-              {/* =================================================
-                  CÁMARA EN VIVO
-                  ================================================= */}
 
               {camaraActiva &&
               !vistaPrevia && (
 
-                <div className="monitoreo-controles-camara">
+                <div className="monitoreo-controles">
 
                   <CButton
-
                     color="success"
-
-                    onClick={
-                      capturarFoto
-                    }
-
+                    onClick={capturarFoto}
                   >
 
                     <CIcon
-                      icon={
-                        cilCamera
-                      }
+                      icon={cilCamera}
                       className="me-2"
                     />
 
                     Capturar foto
-
                   </CButton>
 
 
                   <CButton
-
                     color="danger"
-
                     variant="outline"
-
-                    onClick={
-                      detenerCamara
-                    }
-
+                    onClick={detenerCamara}
                   >
 
                     <CIcon
-                      icon={
-                        cilMediaStop
-                      }
+                      icon={cilMediaStop}
                       className="me-2"
                     />
 
                     Detener cámara
-
                   </CButton>
 
                 </div>
 
               )}
 
-
-              {/* =================================================
-                  FOTO CAPTURADA
-                  ================================================= */}
 
               {vistaPrevia && (
 
                 <>
 
                   <div className="monitoreo-separador">
-                    cambiar fotografía
+                    acciones
                   </div>
 
 
-                  <div className="monitoreo-controles-camara">
+                  <div className="monitoreo-controles">
 
                     <CButton
-
                       color="secondary"
-
                       variant="outline"
-
-                      onClick={
-                        nuevaCaptura
-                      }
-
+                      disabled={procesando}
+                      onClick={nuevaCaptura}
                     >
 
                       <CIcon
-                        icon={
-                          cilCamera
-                        }
+                        icon={cilCamera}
                         className="me-2"
                       />
 
                       Nueva captura
-
                     </CButton>
 
 
                     <CButton
-
                       color="secondary"
-
                       variant="outline"
-
-                      onClick={
-                        abrirSelector
-                      }
-
+                      disabled={procesando}
+                      onClick={abrirSelector}
                     >
 
                       <CIcon
-                        icon={
-                          cilFolderOpen
-                        }
+                        icon={cilFolderOpen}
                         className="me-2"
                       />
 
                       Otra imagen
-
                     </CButton>
 
                   </div>
 
 
                   <CButton
-
                     color="success"
-
                     className="w-100 mt-2"
-
-                    disabled
-
+                    disabled={
+                      !imagen ||
+                      procesando
+                    }
+                    onClick={procesarImagen}
                   >
 
-                    Detectar placa
+                    {procesando ? (
+
+                      <>
+                        <CSpinner
+                          size="sm"
+                          className="me-2"
+                        />
+
+                        Analizando imagen...
+                      </>
+
+                    ) : (
+
+                      <>
+                        <CIcon
+                          icon={cilSearch}
+                          className="me-2"
+                        />
+
+                        Detectar placa
+                      </>
+
+                    )}
 
                   </CButton>
-
-
-                  <div
-
-                    className="
-                      text-center
-                      text-body-secondary
-                      mt-2
-                    "
-
-                    style={{
-                      fontSize:
-                        10,
-                    }}
-
-                  >
-
-                    El reconocimiento OCR
-                    se habilitará en el siguiente paso.
-
-                  </div>
 
                 </>
 
@@ -2387,7 +2960,7 @@ export default function MonitoreoEntrada() {
 
 
           {/* ===================================================
-              RESULTADO
+              DERECHA
               =================================================== */}
 
           <CCard className="monitoreo-entrada-card">
@@ -2400,10 +2973,7 @@ export default function MonitoreoEntrada() {
 
 
               <div className="monitoreo-entrada-card-subtitulo">
-
-                Resultado de la detección OCR
-                y consulta de vehículo registrado.
-
+                OCR, vehículo, propietario y autorización.
               </div>
 
             </CCardHeader>
@@ -2411,103 +2981,606 @@ export default function MonitoreoEntrada() {
 
             <CCardBody>
 
-              <div className="monitoreo-resultado-vacio">
+              {/* =================================================
+                  PROCESANDO
+                  ================================================= */}
 
-                <div className="monitoreo-resultado-vacio-icono">
+              {procesando && (
 
-                  <CIcon
-                    icon={
-                      cilCamera
+                <div className="ocr-procesando">
+
+                  <div>
+
+                    <CSpinner
+                      color="success"
+                    />
+
+
+                    <h4 className="mt-3">
+                      Analizando vehículo...
+                    </h4>
+
+
+                    <p className="text-body-secondary">
+
+                      Reconociendo la placa y
+                      verificando la información
+                      registrada.
+
+                    </p>
+
+                  </div>
+
+                </div>
+
+              )}
+
+
+              {/* =================================================
+                  ESPERA
+                  ================================================= */}
+
+              {!procesando &&
+              !resultado && (
+
+                <div className="resultado-espera">
+
+                  <div>
+
+                    <div className="resultado-espera-icono">
+
+                      <CIcon
+                        icon={cilCamera}
+                        size="xxl"
+                      />
+
+                    </div>
+
+
+                    <h4>
+
+                      {
+                        imagen
+                          ? 'Imagen lista para analizar'
+                          : 'Esperando una imagen'
+                      }
+
+                    </h4>
+
+
+                    <p>
+
+                      {
+                        imagen
+
+                          ? 'Presiona Detectar placa para iniciar el reconocimiento.'
+
+                          : 'Captura una fotografía o selecciona una imagen para comenzar.'
+                      }
+
+                    </p>
+
+                  </div>
+
+                </div>
+
+              )}
+
+
+              {/* =================================================
+                  RESULTADO
+                  ================================================= */}
+
+              {!procesando &&
+              resultado && (
+
+                <>
+
+                  {/* =============================================
+                      ESTADO SUPERIOR
+                      ============================================= */}
+
+                  <div className="ocr-resultado-superior">
+
+                    <div className="ocr-estado-linea">
+
+                      <div className="ocr-estado-icono">
+
+                        <CIcon
+                          icon={
+                            obtenerIconoEstado()
+                          }
+                          size="xl"
+                        />
+
+                      </div>
+
+
+                      <div>
+
+                        <CBadge
+                          color={
+                            obtenerColorEstado()
+                          }
+                          textColor={
+                            obtenerColorEstado() ===
+                            'warning'
+                              ? 'dark'
+                              : undefined
+                          }
+                        >
+                          {
+                            estado ||
+                            'Sin estado'
+                          }
+                        </CBadge>
+
+
+                        <h3>
+                          {obtenerTituloEstado()}
+                        </h3>
+
+                      </div>
+
+                    </div>
+
+
+                    <p className="mt-2">
+
+                      {obtenerDescripcionEstado()}
+
+                    </p>
+
+                  </div>
+
+
+                  {/* =============================================
+                      PLACA + CONFIANZA
+                      ============================================= */}
+
+                  <div className="ocr-placa-principal">
+
+                    <div className="ocr-placa-box">
+
+                      <span className="ocr-label">
+                        Placa detectada
+                      </span>
+
+
+                      <div className="ocr-placa-valor">
+                        {placa || '—'}
+                      </div>
+
+                    </div>
+
+
+                    <div className="ocr-placa-box">
+
+                      <span className="ocr-label">
+                        Confianza OCR
+                      </span>
+
+
+                      <div className="ocr-confianza-valor">
+                        {confianza}
+                      </div>
+
+                    </div>
+
+                  </div>
+
+
+                  {/* =============================================
+                      IMAGEN MARCADA
+                      ============================================= */}
+
+                  {imagenMarcada && (
+
+                    <div className="ocr-imagen-marcada-contenedor">
+
+                      <div className="ocr-imagen-marcada-cabecera">
+                        Placa localizada por el sistema
+                      </div>
+
+
+                      <img
+                        src={imagenMarcada}
+                        alt="Vehículo con placa detectada"
+                        className="ocr-imagen-marcada"
+                      />
+
+                    </div>
+
+                  )}
+
+
+                  {/* =============================================
+                      VEHÍCULO ENCONTRADO
+                      ============================================= */}
+
+                  {estado ===
+                    'encontrado' &&
+                  vehiculo && (
+
+                    <>
+
+                      <div className="ocr-seccion">
+
+                        <div className="ocr-seccion-titulo">
+
+                          <CIcon
+                            icon={cilCarAlt}
+                          />
+
+                          VEHÍCULO REGISTRADO
+
+                        </div>
+
+
+                        <div className="ocr-vehiculo-contenido">
+
+                          <FotoVehiculo
+
+                            src={
+                              vehiculo.foto_url
+                            }
+
+                            marca={
+                              vehiculo.marca
+                            }
+
+                            modelo={
+                              vehiculo.modelo
+                            }
+
+                          />
+
+
+                          <div className="ocr-datos-grid">
+
+                            <div className="ocr-dato">
+
+                              <span className="ocr-label">
+                                Marca
+                              </span>
+
+                              <div className="ocr-dato-valor">
+                                {vehiculo.marca || '—'}
+                              </div>
+
+                            </div>
+
+
+                            <div className="ocr-dato">
+
+                              <span className="ocr-label">
+                                Modelo
+                              </span>
+
+                              <div className="ocr-dato-valor">
+                                {vehiculo.modelo || '—'}
+                              </div>
+
+                            </div>
+
+
+                            <div className="ocr-dato">
+
+                              <span className="ocr-label">
+                                Año
+                              </span>
+
+                              <div className="ocr-dato-valor">
+                                {vehiculo.anio || '—'}
+                              </div>
+
+                            </div>
+
+
+                            <div className="ocr-dato">
+
+                              <span className="ocr-label">
+                                Color
+                              </span>
+
+                              <div className="ocr-dato-valor">
+                                {vehiculo.color || '—'}
+                              </div>
+
+                            </div>
+
+
+                            <div className="ocr-dato">
+
+                              <span className="ocr-label">
+                                Tipo
+                              </span>
+
+                              <div className="ocr-dato-valor">
+                                {vehiculo.tipo || '—'}
+                              </div>
+
+                            </div>
+
+
+                            <div className="ocr-dato">
+
+                              <span className="ocr-label">
+                                Placa
+                              </span>
+
+                              <div className="ocr-dato-valor">
+                                {
+                                  vehiculo.placa ||
+                                  placa ||
+                                  '—'
+                                }
+                              </div>
+
+                            </div>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+
+                      {/* =========================================
+                          PROPIETARIO
+                          ========================================= */}
+
+                      <div className="ocr-seccion">
+
+                        <div className="ocr-seccion-titulo">
+
+                          <CIcon
+                            icon={cilUser}
+                          />
+
+                          PROPIETARIO
+
+                        </div>
+
+
+                        <div className="ocr-propietario-contenido">
+
+                          <FotoPropietario
+
+                            src={
+                              vehiculo
+                                .foto_propietario_url
+                            }
+
+                            nombre={
+                              vehiculo
+                                .propietario_nombre
+                            }
+
+                          />
+
+
+                          <div>
+
+                            <div className="ocr-propietario-nombre">
+
+                              {
+                                vehiculo
+                                  .propietario_nombre
+                                ||
+                                'Sin información'
+                              }
+
+                            </div>
+
+
+                            <div className="ocr-propietario-cedula">
+
+                              Cédula:{' '}
+
+                              {
+                                vehiculo
+                                  .cedula_enmascarada
+                                ||
+                                '—'
+                              }
+
+                            </div>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+
+                      {/* =========================================
+                          AUTORIZACIÓN
+                          ========================================= */}
+
+                      <div
+
+                        className={
+
+                          autorizado
+
+                            ? 'ocr-autorizacion ocr-autorizacion-ok'
+
+                            : 'ocr-autorizacion ocr-autorizacion-no'
+
+                        }
+
+                      >
+
+                        <CIcon
+
+                          icon={
+                            autorizado
+                              ? cilCheckCircle
+                              : cilXCircle
+                          }
+
+                          className="me-2"
+
+                        />
+
+
+                        {
+                          autorizado
+                            ? 'INGRESO AUTORIZADO — El vehículo puede ingresar al parqueadero.'
+                            : 'INGRESO NO AUTORIZADO — El vehículo está registrado, pero no posee autorización vigente.'
+                        }
+
+                      </div>
+
+                    </>
+
+                  )}
+
+
+                  {/* =============================================
+                      NO REGISTRADO
+                      ============================================= */}
+
+                  {estado ===
+                    'no_registrado' && (
+
+                    <div className="ocr-no-registrado">
+
+                      <div className="ocr-no-registrado-icono">
+
+                        <CIcon
+                          icon={cilXCircle}
+                          size="xxl"
+                        />
+
+                      </div>
+
+
+                      <h3>
+                        VEHÍCULO NO REGISTRADO
+                      </h3>
+
+
+                      <p>
+
+                        La placa fue reconocida
+                        correctamente, pero no existe
+                        un vehículo asociado en la
+                        base de datos.
+
+                      </p>
+
+
+                      <CAlert
+                        color="danger"
+                        className="mt-3 mb-0"
+                      >
+
+                        <strong>
+                          Ingreso no autorizado.
+                        </strong>
+
+                        {' '}
+
+                        El vehículo deberá ser
+                        registrado y autorizado antes
+                        de utilizar el parqueadero.
+
+                      </CAlert>
+
+                    </div>
+
+                  )}
+
+
+                  {/* =============================================
+                      SIN PLACA
+                      ============================================= */}
+
+                  {estado ===
+                    'sin_placa' && (
+
+                    <CAlert color="warning">
+
+                      No se detectó una placa en la
+                      fotografía. Intenta acercar la
+                      cámara, mejorar la iluminación
+                      o utilizar otra imagen.
+
+                    </CAlert>
+
+                  )}
+
+
+                  {/* =============================================
+                      BAJA CONFIANZA
+                      ============================================= */}
+
+                  {estado ===
+                    'baja_confianza' && (
+
+                    <CAlert color="warning">
+
+                      La placa fue localizada, pero
+                      la confianza del reconocimiento
+                      es insuficiente. Captura una
+                      fotografía más clara.
+
+                    </CAlert>
+
+                  )}
+
+
+                  {/* =============================================
+                      MÚLTIPLES PLACAS
+                      ============================================= */}
+
+                  {estado ===
+                    'multiples_placas' && (
+
+                    <CAlert color="warning">
+
+                      Se detectaron varias placas.
+                      Utiliza una imagen donde aparezca
+                      únicamente el vehículo que deseas
+                      comprobar.
+
+                    </CAlert>
+
+                  )}
+
+
+                  {/* =============================================
+                      OTRA IMAGEN
+                      ============================================= */}
+
+                  <CButton
+
+                    color="secondary"
+
+                    variant="outline"
+
+                    className="w-100 mt-3"
+
+                    onClick={
+                      descartarImagen
                     }
-                  />
 
-                </div>
+                  >
 
+                    <CIcon
+                      icon={cilReload}
+                      className="me-2"
+                    />
 
-                <h4>
+                    Procesar otra imagen
 
-                  {
-                    imagen
-                      ? 'Imagen preparada'
-                      : 'Esperando una imagen'
-                  }
+                  </CButton>
 
-                </h4>
+                </>
 
-
-                <p>
-
-                  {
-                    imagen
-                      ? 'La fotografía está lista para ser enviada al sistema de reconocimiento de placas.'
-                      : 'Captura una fotografía o selecciona una imagen del vehículo para continuar.'
-                  }
-
-                </p>
-
-              </div>
-
-
-              <div className="monitoreo-datos-espera">
-
-                <div className="monitoreo-dato">
-
-                  <span className="monitoreo-dato-label">
-                    Estado
-                  </span>
-
-                  <span className="monitoreo-dato-valor">
-
-                    {
-                      imagen
-                        ? 'Imagen lista'
-                        : '—'
-                    }
-
-                  </span>
-
-                </div>
-
-
-                <div className="monitoreo-dato">
-
-                  <span className="monitoreo-dato-label">
-                    Placa detectada
-                  </span>
-
-                  <span className="monitoreo-dato-valor">
-                    —
-                  </span>
-
-                </div>
-
-
-                <div className="monitoreo-dato">
-
-                  <span className="monitoreo-dato-label">
-                    Confianza OCR
-                  </span>
-
-                  <span className="monitoreo-dato-valor">
-                    —
-                  </span>
-
-                </div>
-
-
-                <div className="monitoreo-dato">
-
-                  <span className="monitoreo-dato-label">
-                    Vehículo
-                  </span>
-
-                  <span className="monitoreo-dato-valor">
-                    —
-                  </span>
-
-                </div>
-
-              </div>
+              )}
 
             </CCardBody>
 
