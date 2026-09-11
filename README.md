@@ -120,9 +120,8 @@ Durante las operaciones se muestran **indicadores de carga, mensajes de éxito/e
 
 ## 📷 Monitoreo de entrada y reconocimiento OCR
 
-<p align="center">
-  <a href="PEGAR_AQUI_LINK_DE_LA_CAPTURA_DEL_PANEL_OCR">Ver captura del panel de Monitoreo de entrada</a>
-</p>
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/eb8f739c-7a22-432e-9198-0cf18fd50172" />
+
 
 El panel **Monitoreo de entrada** fue incorporado como una herramienta administrativa para apoyar el control vehicular mediante reconocimiento automático de placas.
 
@@ -160,6 +159,9 @@ Vehículo / propietario / autorización
 - ♻️ Liberación de la cámara al abandonar la vista.
 
 ### Estados controlados
+
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/57186b99-950c-45b2-bd0a-db74c6ab6b85" />
+
 
 | Estado | Comportamiento |
 |---|---|
