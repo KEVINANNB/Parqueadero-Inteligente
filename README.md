@@ -2,7 +2,7 @@
 
 # 🅿️ UTEQ Smart Parking
 
-### Gestión inteligente de vehículos, propietarios, puestos y reservas
+### Gestión inteligente de vehículos, propietarios, puestos, reservas y monitoreo OCR
 
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -11,7 +11,7 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Realtime%20Database-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![Azure](https://img.shields.io/badge/Azure-Static%20Web%20Apps-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
 
-**Aplicación web para administrar un parqueadero inteligente de 80 espacios, con control de vehículos y propietarios, autenticación por roles, reservas, sensores en tiempo real e historial de operaciones.**
+**Aplicación web para administrar un parqueadero inteligente de 80 espacios, con control de vehículos y propietarios, autenticación por roles, reservas, sensores en tiempo real, historial de operaciones y monitoreo de entrada mediante reconocimiento OCR de placas.**
 
 </div>
 
@@ -21,7 +21,7 @@
 
 **UTEQ Smart Parking** es una aplicación web orientada a la administración de un parqueadero inteligente. El sistema centraliza la información de **vehículos, propietarios, cuentas, puestos y reservas**, y combina los datos administrativos de **Supabase** con las lecturas de sensores almacenadas en **Firebase Realtime Database**.
 
-La interfaz utiliza **React, Vite y CoreUI**, con navegación protegida por autenticación y dos niveles principales de acceso: **usuario normal** y **administrador**. El despliegue se realiza mediante **Azure Static Web Apps** y el repositorio mantiene el flujo de integración a través de GitHub.
+La interfaz utiliza **React, Vite y CoreUI**, con navegación protegida por autenticación y dos niveles principales de acceso: **usuario normal** y **administrador**. El sistema incorpora además un módulo administrativo de **Monitoreo de entrada**, capaz de capturar o cargar imágenes, enviarlas a un servicio OCR y mostrar el resultado del reconocimiento de placas. El despliegue se realiza mediante **Azure Static Web Apps** y el repositorio mantiene el flujo de integración a través de GitHub.
 
 ---
 
@@ -115,6 +115,69 @@ El formulario comprueba los campos antes de guardar, incluyendo:
 - imágenes requeridas según el tipo de operación.
 
 Durante las operaciones se muestran **indicadores de carga, mensajes de éxito/error y botones deshabilitados temporalmente** para evitar acciones duplicadas.
+
+---
+
+## 📷 Monitoreo de entrada y reconocimiento OCR
+
+<p align="center">
+  <a href="PEGAR_AQUI_LINK_DE_LA_CAPTURA_DEL_PANEL_OCR">Ver captura del panel de Monitoreo de entrada</a>
+</p>
+
+El panel **Monitoreo de entrada** fue incorporado como una herramienta administrativa para apoyar el control vehicular mediante reconocimiento automático de placas.
+
+### Flujo de reconocimiento
+
+```text
+Cámara / imagen JPG o PNG
+        ↓
+Vista previa
+        ↓
+Detectar placa
+        ↓
+POST binario al servicio OCR
+        ↓
+Resultado del reconocimiento
+        ↓
+Placa + confianza + imagen marcada
+        ↓
+Vehículo / propietario / autorización
+```
+
+### Funciones principales
+
+- 📹 Captura de video en tiempo real mediante la cámara del dispositivo.
+- 📸 Captura de fotografías desde el navegador.
+- 📁 Selección de imágenes JPG/JPEG/PNG desde el equipo.
+- 📏 Validación de formato y tamaño máximo de imagen.
+- 🔎 Envío de la fotografía como cuerpo binario mediante `POST`.
+- 🧠 Reconocimiento OCR de la placa vehicular.
+- 🎯 Visualización de la placa detectada y nivel de confianza.
+- 🖼️ Presentación de la imagen marcada por el servicio OCR.
+- 🚗 Visualización de datos del vehículo cuando el servicio lo identifica.
+- 👤 Presentación de datos del propietario y autorización.
+- ⏳ Indicador de procesamiento y bloqueo temporal del botón para evitar solicitudes duplicadas.
+- ♻️ Liberación de la cámara al abandonar la vista.
+
+### Estados controlados
+
+| Estado | Comportamiento |
+|---|---|
+| `encontrado` | Muestra vehículo, propietario y autorización |
+| `no_registrado` | Indica que la placa fue reconocida pero el vehículo no está registrado |
+| `sin_placa` | Solicita capturar o seleccionar una nueva imagen |
+| `baja_confianza` | Advierte que la lectura no es suficientemente confiable |
+| `multiples_placas` | Solicita utilizar una imagen con un solo vehículo |
+
+### Seguridad del endpoint
+
+La URL del servicio OCR **no se escribe directamente en los componentes React**. Se obtiene desde la variable de entorno:
+
+```env
+VITE_OCR_ENDPOINT=
+```
+
+En producción, el valor se suministra mediante **GitHub Actions Secrets** durante el proceso de compilación y despliegue.
 
 ---
 
@@ -232,6 +295,8 @@ flowchart LR
     R --> S[Supabase PostgreSQL]
     R --> ST[Supabase Storage]
     R --> F[Firebase Realtime Database]
+    R --> OCR[Servicio OCR de placas]
+    OCR --> OR[Placa + confianza + imagen marcada]
     S --> RL[RLS / Políticas]
     F --> SE[Sensores / estados]
     R --> AZ[Azure Static Web Apps]
@@ -250,6 +315,7 @@ flowchart LR
 | **Supabase Storage** | Fotografías de perfil y vehículos |
 | **Supabase Realtime** | Actualizaciones relacionadas con reservas e historial |
 | **Firebase RTDB** | Lecturas de sensores y estados físicos |
+| **Servicio OCR REST** | Reconocimiento de placas, confianza e imagen marcada |
 | **Azure Static Web Apps** | Publicación de la aplicación |
 | **GitHub Actions** | Automatización del despliegue |
 
@@ -272,6 +338,7 @@ flowchart LR
 | Gestionar puestos | ❌ | ✅ |
 | Consultar historial global | ❌ | ✅ |
 | Gestionar propietarios/cuentas | ❌ | ✅ |
+| Monitoreo de entrada y reconocimiento OCR | ❌ | ✅ |
 
 ---
 
@@ -342,9 +409,11 @@ Parqueadero-Inteligente/
 │   ├── lib/
 │   ├── pages/
 │   ├── services/
+│   │   └── ocr.js
 │   ├── views/
 │   │   ├── cuenta/
 │   │   └── parqueadero/
+│   │       └── MonitoreoEntrada.jsx
 │   │
 │   ├── App.jsx
 │   ├── App.css
@@ -390,6 +459,8 @@ Crear un archivo `.env` con las variables utilizadas por la aplicación.
 ```env
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
+
+VITE_OCR_ENDPOINT=
 
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=
@@ -464,6 +535,15 @@ Azure Static Web Apps
 - [x] Historial privado por usuario.
 - [x] Diseño responsivo.
 - [x] Persistencia de sesión al refrescar rutas protegidas.
+- [x] Monitoreo de entrada administrativo.
+- [x] Cámara en tiempo real desde el navegador.
+- [x] Captura y selección de imágenes.
+- [x] Validación de formato y tamaño de imágenes.
+- [x] Consumo de endpoint OCR mediante POST binario.
+- [x] Reconocimiento de placas y nivel de confianza.
+- [x] Visualización de imagen marcada por OCR.
+- [x] Control de estados `encontrado`, `no_registrado`, `sin_placa`, `baja_confianza` y `multiples_placas`.
+- [x] Protección de `VITE_OCR_ENDPOINT` mediante variables de entorno / GitHub Secrets.
 - [x] Despliegue en Azure Static Web Apps.
 
 ---
@@ -477,7 +557,6 @@ Proyecto desarrollado para la **Universidad Técnica Estatal de Quevedo (UTEQ)**
 <div align="center">
 
 ### UTEQ Smart Parking
-
-**80 espacios · vehículos · propietarios · reservas · sensores · seguridad**
+**80 espacios · vehículos · propietarios · reservas · sensores · OCR · seguridad**
 
 </div>
